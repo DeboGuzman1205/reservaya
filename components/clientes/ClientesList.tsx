@@ -38,9 +38,7 @@ export default function ClientesList({
       year: 'numeric'
     });
   };
-  
 
-  
   // Diálogo de confirmación para eliminar cliente
   const ConfirmDeleteDialog = ({ id, nombre, apellido }: { id: number, nombre: string, apellido: string }) => (
     <div className="fixed inset-0 z-10 flex items-center justify-center bg-black bg-opacity-50">
@@ -109,7 +107,6 @@ if (clientes.length === 0) {
   );
 }
 
-  
   return (
     <>
       {/* Barra de búsqueda */}

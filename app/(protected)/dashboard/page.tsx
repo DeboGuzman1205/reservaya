@@ -1,19 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CalendarIcon, ClockIcon, UserGroupIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 import StatCard from '@/components/StatCard';
 import CourtOccupancyChart from '@/components/charts/CourtOccupancyChart';
 import HourlyUsageChart from '@/components/charts/HourlyUsageChart';
 
 import WeeklyBookingsChart from '@/components/charts/WeeklyBookingsChart';
+import RealtimeStatus from '@/components/RealtimeStatus';
+import { useDashboardRealtime } from '@/lib/useRealtime';
+import { notifications } from '@/lib/notifications';
 import {
   obtenerEstadisticasDashboard,
   obtenerReservasPorHorario,
   obtenerReservasPorDiaSemana,
-
   obtenerHorariosDisponibles,
-
 } from '@/app/api/reservas/actions';
 import type { 
   DashboardStats, 
@@ -62,37 +63,77 @@ export default function DashboardPage() {
     return () => clearInterval(intervalo);
   }, []);
 
-  useEffect(() => {
-    const cargarDatos = async () => {
-      try {
-        const [
-          estadisticas,
-          datosPorHorario,
-          datosPorDia,
-          horariosData
-        ] = await Promise.all([
-          obtenerEstadisticasDashboard(),
-          obtenerReservasPorHorario(),
-          obtenerReservasPorDiaSemana(),
-          obtenerHorariosDisponibles()
-        ]);
+  // Función para cargar todos los datos
+  const cargarDatos = useCallback(async () => {
+    try {
+      const [
+        estadisticas,
+        datosPorHorario,
+        datosPorDia,
+        horariosData
+      ] = await Promise.all([
+        obtenerEstadisticasDashboard(),
+        obtenerReservasPorHorario(),
+        obtenerReservasPorDiaSemana(),
+        obtenerHorariosDisponibles()
+      ]);
 
-        setStatsData(estadisticas);
-        setReservasPorHorario(datosPorHorario);
-        setReservasPorDia(datosPorDia);
-        setHorariosDisponibles(horariosData);
-      } catch {
-        // Error silencioso en producción
-      }
-    };
-
-    cargarDatos();
+      setStatsData(estadisticas);
+      setReservasPorHorario(datosPorHorario);
+      setReservasPorDia(datosPorDia);
+      setHorariosDisponibles(horariosData);
+    } catch {
+      notifications.error('Error al cargar los datos del dashboard');
+    }
   }, []);
+
+  // Funciones callback para actualización en tiempo real
+  const onReservaChange = useCallback(() => {
+    // Usar setTimeout para evitar conflictos con estados de carga
+    setTimeout(() => {
+      cargarDatos();
+    }, 100);
+  }, [cargarDatos]);
+
+  const onCanchaChange = useCallback(() => {
+    // Usar setTimeout para evitar conflictos con estados de carga
+    setTimeout(() => {
+      cargarDatos();
+    }, 100);
+  }, [cargarDatos]);
+
+  // Configurar suscripciones de Realtime
+  const { isConnected, connections, errors } = useDashboardRealtime({
+    onReservaChange,
+    onCanchaChange,
+    enabled: true
+  });
+
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
 
 
 
   return (
     <div className="p-6">
+      {/* Header con estado de conexión Realtime */}
+      <div className="mb-6 bg-white rounded-lg shadow-md p-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard ReservaYA</h1>
+            <p className="text-gray-600">Gestión de reservas en tiempo real</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <RealtimeStatus 
+              isConnected={isConnected}
+              connections={connections}
+              errors={errors.filter((error): error is string => error !== null)}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Estadísticas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <StatCard 
@@ -310,7 +351,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
 
     </div>
   );

@@ -58,12 +58,6 @@ export const ReservaDetailsModal = ({
       
       // Verificar que las fechas sean válidas
       if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
-        console.error('Horas inválidas:', { 
-          inicio: reserva.hora_inicio, 
-          fin: reserva.hora_fin,
-          inicioNorm: horaInicioNorm,
-          finNorm: horaFinNorm
-        });
         return 0;
       }
       

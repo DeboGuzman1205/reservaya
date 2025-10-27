@@ -60,8 +60,6 @@ export default function Navbar({ title }: NavbarProps) {
             <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
           </div>
         )}
-        
-      
 
         <div className="relative">
           <button className="relative p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none">

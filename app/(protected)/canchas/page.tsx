@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Cancha } from '@/types';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import CanchaForm from '@/components/canchas/CanchaForm';
 import CanchasList from '@/components/canchas/CanchasList';
 import { useRouter } from 'next/navigation';
+import { useCanchasRealtime } from '@/lib/useRealtime';
 
 // Importar las acciones del servidor
 import { 
@@ -25,20 +26,27 @@ export default function CanchasPage() {
     const [errorMessage, setErrorMessage] = useState('');
 
     // Cargar datos de canchas
-    const cargarCanchas = async () => {
+    const cargarCanchas = useCallback(async () => {
         try {
             const data = await obtenerCanchas();
             setCanchas(data);
-        } catch (error) {
+        } catch {
             setErrorMessage('Error al cargar las canchas. Intenta nuevamente.');
-            console.error('Error al cargar canchas:', error);
         }
-    };
+    }, []);
+
+    // Hook de Realtime optimizado - se actualiza automáticamente cuando hay cambios
+    const { isConnected, error: realtimeError } = useCanchasRealtime(() => {
+        // Recargar datos cuando hay cambios en tiempo real
+        setTimeout(() => {
+            cargarCanchas();
+        }, 100);
+    });
 
     // Efecto para cargar canchas al montar el componente
     useEffect(() => {
         cargarCanchas();
-    }, []);
+    }, [cargarCanchas]);
 
     // Manejar creación de cancha
     const handleCrearCancha = async (cancha: Omit<Cancha, 'id_cancha' | 'created_at'>) => {
@@ -50,10 +58,9 @@ export default function CanchasPage() {
             setMostrarFormulario(false);
             cargarCanchas();
             router.refresh();
-        } catch (error) {
+        } catch {
             setErrorMessage('Error al crear la cancha. Intenta nuevamente.');
-            console.error('Error al crear cancha:', error);
-        } finally {
+                    } finally {
             setIsLoading(false);
         }
     };
@@ -71,10 +78,9 @@ export default function CanchasPage() {
             setMostrarFormulario(false);
             cargarCanchas();
             router.refresh();
-        } catch (error) {
+        } catch {
             setErrorMessage('Error al actualizar la cancha. Intenta nuevamente.');
-            console.error('Error al actualizar cancha:', error);
-        } finally {
+                    } finally {
             setIsLoading(false);
         }
     };
@@ -88,10 +94,9 @@ export default function CanchasPage() {
             await eliminarCancha(id);
             cargarCanchas();
             router.refresh();
-        } catch (error) {
+        } catch {
             setErrorMessage('Error al eliminar la cancha. Intenta nuevamente.');
-            console.error('Error al eliminar cancha:', error);
-        } finally {
+                    } finally {
             setIsLoading(false);
         }
     };
@@ -105,10 +110,9 @@ export default function CanchasPage() {
             await cambiarEstadoCancha(id, estado_cancha);
             cargarCanchas();
             router.refresh();
-        } catch (error) {
+        } catch {
             setErrorMessage('Error al cambiar el estado de la cancha. Intenta nuevamente.');
-            console.error('Error al cambiar estado:', error);
-        } finally {
+                    } finally {
             setIsLoading(false);
         }
     };
@@ -136,6 +140,17 @@ export default function CanchasPage() {
 
     return (
         <div className="container mx-auto px-4 py-6">
+            {/* Indicador de estado de conexión Realtime */}
+            <div className="mb-4 flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-sm text-gray-600">
+                    Sincronización: {isConnected ? 'Conectado' : 'Desconectado'}
+                </span>
+                {realtimeError && (
+                    <span className="text-red-500 text-sm">({realtimeError})</span>
+                )}
+            </div>
+
             <div className="flex justify-between items-center mb-6">
                 {!mostrarFormulario && (
                     <button

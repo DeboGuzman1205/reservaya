@@ -20,7 +20,6 @@ const verificarConectividad = async (supabase: ReturnType<typeof createServerCom
     }
     return true;
   } catch (error) {
-    console.error('Error verificando conectividad:', error);
     throw error;
   }
 };
@@ -58,7 +57,6 @@ const verificarDisponibilidad = async (
   
   // Validar horas
   validarHoraReserva(horaInicio, horaFin);
-  
 
   let query = supabase
     .from('reserva')
@@ -73,7 +71,6 @@ const verificarDisponibilidad = async (
     } catch {
     }
   }
-  
 
   try {
     query = query.eq('fecha_reserva', fecha);
@@ -97,12 +94,9 @@ const verificarDisponibilidad = async (
   const { data: reservasExistentes, error } = await query;
   
   if (error) {
-    console.error('Error al consultar reservas existentes:', error);
     throw new Error(`Error al verificar disponibilidad: ${error.message}`);
   }
-  
 
-  
   // Función para normalizar formatos de hora (remover segundos si existen)
   const normalizarHora = (hora: string) => {
     if (hora.includes(':')) {
@@ -112,10 +106,8 @@ const verificarDisponibilidad = async (
     return hora;
   };
 
-
   if (reservasExistentes && reservasExistentes.length > 0) {
     const conflictos = reservasExistentes.filter(reserva => {
-      
       // Convertir horas a minutos desde medianoche para comparación correcta
       const horaAMinutos = (hora: string): number => {
         const [hh, mm] = hora.split(':').map(Number);
@@ -136,15 +128,12 @@ const verificarDisponibilidad = async (
       const finExistenteMin = horaAMinutos(finReservaExistente);
       const inicioNuevoMin = horaAMinutos(inicioNuevaReserva);
       const finNuevoMin = horaAMinutos(finNuevaReserva);
-      
 
       // Dos intervalos se solapan si: max(inicio1, inicio2) < min(fin1, fin2)
       const inicioSolapamiento = Math.max(inicioNuevoMin, inicioExistenteMin);
       const finSolapamiento = Math.min(finNuevoMin, finExistenteMin);
       const hayConflicto = inicioSolapamiento < finSolapamiento;
-      
 
-      
       return hayConflicto;
     });
     
@@ -173,16 +162,12 @@ export async function obtenerReservasPorFechaYCancha(fecha: string, idCancha: nu
       .in('estado_reserva', ['confirmada', 'pendiente']); // Solo reservas activas
     
     if (error) {
-      console.error('Error al obtener reservas existentes:', error);
-      return [];
+            return [];
     }
-    
 
-    
     return data || [];
-  } catch (error) {
-    console.error('Error en obtenerReservasPorFechaYCancha:', error);
-    return [];
+  } catch {
+        return [];
   }
 }
 
@@ -202,8 +187,7 @@ export const calcularCostoReserva = async (
     .single();
   
   if (error || !cancha) {
-    console.warn(`No se pudo calcular el costo: ${error?.message || 'Cancha no encontrada'}`);
-    return 0;
+        return 0;
   }
   
   // Calcular la duración en horas (manejar reservas que terminan a las 00:00)
@@ -240,9 +224,7 @@ export async function obtenerReservas() {
       .select('*');
       
     if (error) {
-      console.error('Error al obtener reservas:', error);
-      
-      if (error.message.includes('relation') && error.message.includes('does not exist')) {
+            if (error.message.includes('relation') && error.message.includes('does not exist')) {
         throw new Error('La tabla "reserva" no existe en la base de datos. Por favor, crea la estructura de la base de datos.');
       }
       
@@ -280,8 +262,7 @@ export async function obtenerReservas() {
     return reservasConDatos;
     
   } catch (error) {
-    console.error('Error en obtenerReservas:', error);
-    throw new Error('Error al cargar las reservas: ' + (error as Error).message);
+        throw new Error('Error al cargar las reservas: ' + (error as Error).message);
   }
 }
 
@@ -326,8 +307,7 @@ export async function crearReserva(reserva: Omit<Reserva, 'id_reserva'>) {
     .single();
   
   if (error) {
-    console.error('Error al crear reserva:', error);
-    throw new Error(`Error al crear la reserva: ${error.message}`);
+        throw new Error(`Error al crear la reserva: ${error.message}`);
   }
   
   revalidatePath('/reservas');
@@ -390,8 +370,7 @@ export async function actualizarReserva(
     .eq('id_reserva', id);
   
   if (error) {
-    console.error('Error al actualizar reserva:', error);
-    throw new Error(`Error al actualizar la reserva: ${error.message}`);
+        throw new Error(`Error al actualizar la reserva: ${error.message}`);
   }
   
   revalidatePath('/reservas');
@@ -408,8 +387,7 @@ export async function eliminarReserva(id: number) {
     .eq('id_reserva', id);
   
   if (error) {
-    console.error('Error al eliminar reserva:', error);
-    throw new Error('Error al eliminar la reserva');
+        throw new Error('Error al eliminar la reserva');
   }
   
   revalidatePath('/reservas');
@@ -432,8 +410,7 @@ export async function cambiarEstadoReserva(id: number, estado: string) {
     .eq('id_reserva', id);
   
   if (error) {
-    console.error('Error al cambiar estado de reserva:', error);
-    throw new Error('Error al cambiar el estado de la reserva');
+        throw new Error('Error al cambiar el estado de la reserva');
   }
   
   revalidatePath('/reservas');
@@ -451,8 +428,7 @@ export async function buscarReservas(query: string) {
       .select('*');
       
     if (error) {
-      console.error('Error al buscar reservas:', error);
-      throw new Error('Error al buscar reservas: ' + error.message);
+            throw new Error('Error al buscar reservas: ' + error.message);
     }
     
     // Filtrar manualmente por el query usando nombres reales de columnas
@@ -493,8 +469,7 @@ export async function buscarReservas(query: string) {
     
     return reservasConDatos;
   } catch (error) {
-    console.error('Error en buscarReservas:', error);
-    throw new Error('Error al buscar reservas: ' + (error as Error).message);
+        throw new Error('Error al buscar reservas: ' + (error as Error).message);
   }
 }
 
@@ -566,8 +541,7 @@ export async function verificarBaseDatos() {
 
     return { success: true, data: resultado, message: 'Diagnóstico completado' };
   } catch (error) {
-    console.error('Error verificando base de datos:', error);
-    return { success: false, error: (error as Error).message };
+        return { success: false, error: (error as Error).message };
   }
 }
 
@@ -586,8 +560,7 @@ export async function obtenerClientesActivos() {
       .limit(1);
       
     if (tableError) {
-      console.error('Error al acceder a la tabla cliente:', tableError);
-      throw new Error('Error al acceder a la tabla cliente: ' + tableError.message);
+            throw new Error('Error al acceder a la tabla cliente: ' + tableError.message);
     }
     
 
@@ -597,9 +570,7 @@ export async function obtenerClientesActivos() {
       .order('apellido', { ascending: true });
     
     if (clientesError) {
-      console.error('Error al obtener clientes:', clientesError);
-      
-      // Si la tabla no existe, proporcionar un mensaje más específico
+            // Si la tabla no existe, proporcionar un mensaje más específico
       if (clientesError.message.includes('relation') && clientesError.message.includes('does not exist')) {
         throw new Error('La tabla "cliente" no existe en la base de datos. Por favor, crea la estructura de la base de datos.');
       }
@@ -615,8 +586,7 @@ export async function obtenerClientesActivos() {
 
     return clientesActivos;
   } catch (error) {
-    console.error('Error en obtenerClientesActivos:', error);
-    throw new Error('Error al cargar los clientes activos: ' + (error as Error).message);
+        throw new Error('Error al cargar los clientes activos: ' + (error as Error).message);
   }
 }
 
@@ -635,8 +605,7 @@ export async function obtenerCanchasDisponibles() {
       .limit(1);
       
     if (tableError) {
-      console.error('Error al acceder a la tabla cancha:', tableError);
-      throw new Error('Error al acceder a la tabla cancha: ' + tableError.message);
+            throw new Error('Error al acceder a la tabla cancha: ' + tableError.message);
     }
     
     // Ahora obtener todas las canchas
@@ -645,9 +614,7 @@ export async function obtenerCanchasDisponibles() {
       .select('*');
     
     if (error) {
-      console.error('Error al obtener canchas:', error);
-      
-      // Si la tabla no existe, proporcionar un mensaje más específico
+            // Si la tabla no existe, proporcionar un mensaje más específico
       if (error.message.includes('relation') && error.message.includes('does not exist')) {
         throw new Error('La tabla "cancha" no existe en la base de datos. Por favor, crea la estructura de la base de datos.');
       }
@@ -695,8 +662,7 @@ export async function obtenerCanchasDisponibles() {
 
     return canchasOrdenadas;
   } catch (error) {
-    console.error('Error en obtenerCanchasDisponibles:', error);
-    throw new Error('Error al cargar las canchas: ' + (error as Error).message);
+        throw new Error('Error al cargar las canchas: ' + (error as Error).message);
   }
 }
 
@@ -729,8 +695,7 @@ export async function obtenerEstadisticasDashboard() {
       .eq('fecha_reserva', fechaHoy);
     
     if (errorConfirmadas) {
-      console.error('Error obteniendo reservas confirmadas:', errorConfirmadas);
-    }
+          }
     
 
     
@@ -742,8 +707,7 @@ export async function obtenerEstadisticasDashboard() {
       .eq('fecha_reserva', fechaHoy);
     
     if (errorPendientes) {
-      console.error('Error obteniendo reservas pendientes:', errorPendientes);
-    }
+          }
     
 
     
@@ -755,8 +719,7 @@ export async function obtenerEstadisticasDashboard() {
       .neq('estado_reserva', 'cancelada');
     
     if (errorIngresos) {
-      console.error('Error obteniendo reservas para ingresos:', errorIngresos);
-    }
+          }
     
 
     
@@ -786,8 +749,7 @@ export async function obtenerEstadisticasDashboard() {
       .select('id_cancha, estado_cancha');
     
     if (errorCanchas) {
-      console.error('Error obteniendo canchas:', errorCanchas);
-    }
+          }
     
 
     
@@ -808,8 +770,7 @@ export async function obtenerEstadisticasDashboard() {
       .neq('estado_reserva', 'cancelada');
     
     if (errorClientes) {
-      console.error('Error obteniendo clientes activos:', errorClientes);
-    }
+          }
     
     const clientesUnicos = new Set(clientesActivos?.map(r => r.id_cliente)).size;
 
@@ -827,9 +788,8 @@ export async function obtenerEstadisticasDashboard() {
       clientesActivos: clientesUnicos,
       totalReservasMensuales: reservasMensuales?.length || 0
     };
-  } catch (error) {
-    console.error('Error obteniendo estadísticas:', error);
-    return {
+  } catch {
+        return {
       reservasConfirmadas: 0,
       reservasPendientes: 0,
       ingresosDiarios: 0,
@@ -863,9 +823,8 @@ export async function obtenerReservasPorHorario() {
     return Object.entries(horarios)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([hora, cantidad]) => ({ hora, cantidad }));
-  } catch (error) {
-    console.error('Error obteniendo reservas por horario:', error);
-    return [];
+  } catch {
+        return [];
   }
 }
 
@@ -905,9 +864,8 @@ export async function obtenerReservasPorDiaSemana() {
     });
     
     return dias.map((dia, index) => ({ dia, cantidad: conteo[index] }));
-  } catch (error) {
-    console.error('Error obteniendo reservas por día:', error);
-    // Retornar datos vacíos pero válidos
+  } catch {
+        // Retornar datos vacíos pero válidos
     const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     return dias.map(dia => ({ dia, cantidad: 0 }));
   }
@@ -978,9 +936,8 @@ export async function obtenerCanchasMasReservadas() {
     // Ordenar por cantidad de reservas (mayor a menor) pero mantener todas
     return resultado.sort((a, b) => b.cantidad - a.cantidad);
     
-  } catch (error) {
-    console.error('Error obteniendo canchas más reservadas:', error);
-    return [];
+  } catch {
+        return [];
   }
 }
 
@@ -1017,9 +974,8 @@ export async function obtenerIngresosMensuales() {
     }
     
     return meses;
-  } catch (error) {
-    console.error('Error obteniendo ingresos mensuales:', error);
-    return [];
+  } catch {
+        return [];
   }
 }
 
@@ -1160,9 +1116,8 @@ export async function obtenerHorariosDisponibles() {
       };
     }) || [];
     
-  } catch (error) {
-    console.error('Error obteniendo horarios disponibles:', error);
-    return [];
+  } catch {
+        return [];
   }
 }
 
@@ -1199,9 +1154,8 @@ export async function obtenerReservasRecientes(limite = 10, fechaFiltro?: string
       estado_reserva: reserva.estado_reserva,
       costo_reserva: reserva.costo_reserva
     })) || [];
-  } catch (error) {
-    console.error('Error obteniendo reservas:', error);
-    return [];
+  } catch {
+        return [];
   }
 }
 
@@ -1211,9 +1165,8 @@ export async function obtenerReservasDelDia(limite = 20) {
     // Obtener fecha actual (asumiendo servidor en horario argentino)
     const hoy = obtenerFechaLocal(new Date());
     return await obtenerReservasRecientes(limite, hoy);
-  } catch (error) {
-    console.error('Error obteniendo reservas del día:', error);
-    return [];
+  } catch {
+        return [];
   }
 }
 
@@ -1239,14 +1192,12 @@ export async function obtenerReservasPendientesVencidas(tiempoLimiteMinutos = 5)
       .lt('created_at', tiempoLimite.toISOString());
     
     if (error) {
-      console.error('Error obteniendo reservas pendientes vencidas:', error);
-      return [];
+            return [];
     }
     
     return data || [];
-  } catch (error) {
-    console.error('Error en obtenerReservasPendientesVencidas:', error);
-    return [];
+  } catch {
+        return [];
   }
 }
 
@@ -1280,8 +1231,7 @@ export async function cancelarReservasPendientesVencidas() {
       .in('id_reserva', idsVencidos);
     
     if (error) {
-      console.error('Error cancelando reservas vencidas:', error);
-      throw new Error('Error al cancelar reservas vencidas');
+            throw new Error('Error al cancelar reservas vencidas');
     }
     
 
@@ -1298,8 +1248,7 @@ export async function cancelarReservasPendientesVencidas() {
     };
     
   } catch (error) {
-    console.error('Error en cancelarReservasPendientesVencidas:', error);
-    return {
+        return {
       success: false,
       canceladas: 0,
       error: error instanceof Error ? error.message : 'Error desconocido'
@@ -1339,9 +1288,10 @@ export async function obtenerTiempoRestanteReserva(idReserva: number) {
       porcentajeTranscurrido: Math.min(100, (tiempoTranscurridoMs / tiempoLimiteMs) * 100)
     };
     
-  } catch (error) {
-    console.error('Error obteniendo tiempo restante:', error);
-    return null;
+  } catch {
+        return null;
   }
 }
+
+
 

@@ -30,8 +30,8 @@ export const TiempoRestante = ({ idReserva, estadoReserva, onVencimiento }: Tiem
         if (tiempo?.vencida && onVencimiento) {
           onVencimiento();
         }
-      } catch (error) {
-        console.error('Error obteniendo tiempo restante:', error);
+      } catch {
+        // Error silencioso en obtención de tiempo restante
       }
     };
 

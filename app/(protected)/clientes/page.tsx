@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Cliente } from '@/types';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import ClienteForm from '@/components/clientes/ClienteForm';
 import ClientesList from '@/components/clientes/ClientesList';
 import { useRouter } from 'next/navigation';
+import { useRealtimeClientes } from '@/lib/useRealtime';
 
 // Importar las acciones del servidor
 import { 
@@ -25,20 +26,23 @@ export default function ClientesPage() {
     const [errorMessage, setErrorMessage] = useState('');
 
     // Cargar datos de clientes
-    const cargarClientes = async () => {
+    const cargarClientes = useCallback(async () => {
         try {
             const data = await obtenerClientes();
             setClientes(data);
-        } catch (error) {
+        } catch {
             setErrorMessage('Error al cargar los clientes. Intenta nuevamente.');
-            console.error('Error al cargar clientes:', error);
         }
-    };
+    }, []);
 
-    // Efecto para cargar clientes al montar el componente
+    // Hook de Realtime optimizado - se actualiza automáticamente cuando hay cambios
+    const { isConnected, error: realtimeError } = useRealtimeClientes(() => {
+        // Recargar inmediatamente
+        cargarClientes();
+    });    // Efecto para cargar clientes al montar el componente
     useEffect(() => {
         cargarClientes();
-    }, []);
+    }, [cargarClientes]);
 
     // Manejar creación de cliente
     const handleCrearCliente = async (cliente: Omit<Cliente, 'id_cliente' | 'fecha_registro'>) => {
@@ -50,10 +54,9 @@ export default function ClientesPage() {
             setMostrarFormulario(false);
             cargarClientes();
             router.refresh();
-        } catch (error) {
+        } catch {
             setErrorMessage('Error al crear el cliente. Intenta nuevamente.');
-            console.error('Error al crear cliente:', error);
-        } finally {
+                    } finally {
             setIsLoading(false);
         }
     };
@@ -71,10 +74,9 @@ export default function ClientesPage() {
             setMostrarFormulario(false);
             cargarClientes();
             router.refresh();
-        } catch (error) {
+        } catch {
             setErrorMessage('Error al actualizar el cliente. Intenta nuevamente.');
-            console.error('Error al actualizar cliente:', error);
-        } finally {
+                    } finally {
             setIsLoading(false);
         }
     };
@@ -88,10 +90,9 @@ export default function ClientesPage() {
             await eliminarCliente(id);
             cargarClientes();
             router.refresh();
-        } catch (error) {
+        } catch {
             setErrorMessage('Error al eliminar el cliente. Intenta nuevamente.');
-            console.error('Error al eliminar cliente:', error);
-        } finally {
+                    } finally {
             setIsLoading(false);
         }
     };
@@ -108,10 +109,9 @@ export default function ClientesPage() {
                 const resultados = await buscarClientes(query);
                 setClientes(resultados);
             }
-        } catch (error) {
+        } catch {
             setErrorMessage('Error al buscar clientes. Intenta nuevamente.');
-            console.error('Error al buscar clientes:', error);
-        } finally {
+                    } finally {
             setIsLoading(false);
         }
     };
@@ -141,6 +141,17 @@ export default function ClientesPage() {
 
     return (
         <div className="container mx-auto px-4 py-6"> 
+            {/* Indicador de estado de conexión Realtime */}
+            <div className="mb-4 flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-sm text-gray-600">
+                    Sincronización: {isConnected ? 'Conectado' : 'Desconectado'}
+                </span>
+                {realtimeError && (
+                    <span className="text-red-500 text-sm">({realtimeError})</span>
+                )}
+            </div>
+
             <div className="flex justify-between items-center mb-6">
                 <a className='items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors' href='/clientes'>Volver</a>
                 {!mostrarFormulario && (

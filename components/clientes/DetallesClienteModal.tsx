@@ -14,8 +14,6 @@ interface DetallesClienteModalProps {
 export default function DetallesClienteModal({ cliente, isOpen, onClose }: DetallesClienteModalProps) {
   if (!cliente) return null;
 
-
-  
   // Función para formatear la fecha
   const formatearFecha = (fechaISO?: string) => {
     if (!fechaISO) return 'No disponible';

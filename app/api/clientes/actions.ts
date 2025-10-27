@@ -16,7 +16,6 @@ export async function obtenerClientes() {
     .order('id_cliente', { ascending: true });
   
   if (error) {
-    console.error('Error al obtener clientes:', error);
     throw new Error('No se pudieron cargar los clientes');
   }
   
@@ -36,7 +35,6 @@ export async function obtenerClientePorId(id: number) {
     .single();
   
   if (error) {
-    console.error(`Error al obtener el cliente ${id}:`, error);
     throw new Error('No se pudo encontrar el cliente');
   }
   
@@ -61,7 +59,6 @@ export async function crearCliente(cliente: Omit<Cliente, 'id_cliente' | 'fecha_
     .select();
   
   if (error) {
-    console.error('Error al crear cliente:', error);
     throw new Error('No se pudo crear el cliente');
   }
   
@@ -81,7 +78,6 @@ export async function actualizarCliente(id: number, cliente: Partial<Omit<Client
     .select();
   
   if (error) {
-    console.error(`Error al actualizar el cliente ${id}:`, error);
     throw new Error('No se pudo actualizar el cliente');
   }
   
@@ -100,7 +96,6 @@ export async function eliminarCliente(id: number) {
     .eq('id_cliente', id);
   
   if (error) {
-    console.error(`Error al eliminar el cliente ${id}:`, error);
     throw new Error('No se pudo eliminar el cliente');
   }
   
@@ -120,7 +115,6 @@ export async function buscarClientes(query: string) {
     .order('apellido', { ascending: true });
   
   if (error) {
-    console.error('Error al buscar clientes:', error);
     throw new Error('No se pudieron buscar los clientes');
   }
   

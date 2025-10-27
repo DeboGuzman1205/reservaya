@@ -19,8 +19,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     
     // Si hay un error o no hay sesión, redirigir a login
     if (error || !session) {
-      console.error("Error de autenticación o sesión no encontrada:", error?.message);
-      redirect('/login');
+            redirect('/login');
     }
     
     return (
@@ -36,8 +35,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         </div>
       </AutoCancelProvider>
     );
-  } catch (e) {
-    console.error("Error en el layout protegido:", e);
+  } catch {
     redirect('/login');
   }
 }

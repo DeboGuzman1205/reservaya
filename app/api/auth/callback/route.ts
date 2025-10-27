@@ -19,8 +19,7 @@ export async function GET(request: NextRequest) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       
       if (error) {
-        console.error('Error en callback de autenticación:', error);
-        return NextResponse.redirect(
+                return NextResponse.redirect(
           new URL(`/login?error=${encodeURIComponent(error.message)}`, request.url)
         );
       }
@@ -28,8 +27,7 @@ export async function GET(request: NextRequest) {
 
     // URL a la que redirigir después de la autenticación exitosa
     return NextResponse.redirect(new URL('/dashboard', request.url));
-  } catch (error) {
-    console.error('Error inesperado en callback:', error);
+  } catch {
     return NextResponse.redirect(
       new URL('/login?error=Error+inesperado+de+autenticación', request.url)
     );

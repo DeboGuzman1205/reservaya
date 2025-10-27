@@ -16,7 +16,6 @@ export async function obtenerCanchas() {
     .order('id_cancha', { ascending: true });
   
   if (error) {
-    console.error('Error al obtener canchas:', error);
     throw new Error('No se pudieron cargar las canchas');
   }
   
@@ -36,7 +35,6 @@ export async function obtenerCanchaPorId(id: number) {
     .single();
   
   if (error) {
-    console.error(`Error al obtener la cancha ${id}:`, error);
     throw new Error('No se pudo encontrar la cancha');
   }
   
@@ -55,7 +53,6 @@ export async function crearCancha(cancha: Omit<Cancha, 'id_cancha' | 'created_at
     .select();
   
   if (error) {
-    console.error('Error al crear cancha:', error);
     throw new Error('No se pudo crear la cancha');
   }
   
@@ -75,7 +72,6 @@ export async function actualizarCancha(id: number, cancha: Partial<Omit<Cancha, 
     .select();
   
   if (error) {
-    console.error(`Error al actualizar la cancha ${id}:`, error);
     throw new Error('No se pudo actualizar la cancha');
   }
   
@@ -94,7 +90,6 @@ export async function eliminarCancha(id: number) {
     .eq('id_cancha', id);
   
   if (error) {
-    console.error(`Error al eliminar la cancha ${id}:`, error);
     throw new Error('No se pudo eliminar la cancha');
   }
   

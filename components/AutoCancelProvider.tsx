@@ -1,6 +1,5 @@
 'use client';
 
-import { useAutoCancelarReservas, type ResultadoCancelacion } from '../lib/useAutoCancelarReservas';
 import { useEffect } from 'react';
 
 interface AutoCancelProviderProps {
@@ -8,15 +7,25 @@ interface AutoCancelProviderProps {
 }
 
 export const AutoCancelProvider = ({ children }: AutoCancelProviderProps) => {
-  const { ejecutarManualmente } = useAutoCancelarReservas({
-    intervalMinutos: 1, // Revisar cada minuto
-    habilitado: true,
-    onCancelacion: (resultado: ResultadoCancelacion) => {
-      // Solo recargar si se cancelaron reservas
-      if (resultado.success && resultado.canceladas > 0) {
+  useEffect(() => {
+    const checkCancellations = async () => {
+      try {
+        // Llamar al endpoint de auto-cancelar para reservas pendientes vencidas
+        const response = await fetch('/api/reservas/auto-cancelar', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Error en la respuesta del servidor');
+        }
+
+        const resultado = await response.json();
         
-        // Recargar la página si estamos en páginas relevantes
-        if (resultado.canceladas > 0) {
+        // Recargar la página si se cancelaron reservas
+        if (resultado.success && resultado.canceladas > 0) {
           const currentPath = window.location.pathname;
           if (currentPath.includes('/reservas') || currentPath.includes('/dashboard')) {
             setTimeout(() => {
@@ -24,25 +33,21 @@ export const AutoCancelProvider = ({ children }: AutoCancelProviderProps) => {
             }, 1000);
           }
         }
-      }
-    }
-  });
-
-  // Ejecutar una limpieza inicial al montar la aplicación
-  useEffect(() => {
-    const ejecutarLimpiezaInicial = async () => {
-      try {
-        await ejecutarManualmente();
-      } catch {
-        // Silenciar errores de limpieza inicial
+      } catch (error) {
+        console.error('Error al verificar cancelaciones automáticas:', error);
       }
     };
 
-    // Ejecutar después de un pequeño delay para permitir que se inicialice la app
-    const timeoutId = setTimeout(ejecutarLimpiezaInicial, 3000);
-    
-    return () => clearTimeout(timeoutId);
-  }, [ejecutarManualmente]);
+    // Ejecutar inmediatamente
+    checkCancellations();
+
+    // Configurar intervalo cada 30 segundos (más frecuente para mejor responsividad)
+    const interval = setInterval(checkCancellations, 30000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
 
   return <>{children}</>;
 };

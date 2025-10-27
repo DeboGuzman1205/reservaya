@@ -156,7 +156,6 @@ export default function ReservaForm({
     horarios.push('00:00');
     return horarios;
   };
-  
 
   const [estadoReserva, setEstadoReserva] = useState<string>(
     reserva?.estado_reserva || 'pendiente'
@@ -184,11 +183,9 @@ export default function ReservaForm({
           // Generar lista de horarios ocupados (ya filtradas por la consulta)
           const ocupados = reservas.map(reserva => `${reserva.hora_inicio}-${reserva.hora_fin}`);
           setHorariosOcupados(ocupados);
-          
 
-
-        } catch (error) {
-          console.error('Error al cargar reservas existentes:', error);
+        } catch {
+          // Error silencioso al cargar reservas existentes
         }
       }
     };
@@ -242,9 +239,7 @@ export default function ReservaForm({
     // Comparar solo las fechas, no las horas
     const fechaSeleccionadaSolo = new Date(fechaSeleccionada.getFullYear(), fechaSeleccionada.getMonth(), fechaSeleccionada.getDate());
     const hoySolo = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-    
 
-    
     if (fechaSeleccionadaSolo < hoySolo) {
       setError('No puede realizar reservas en fechas pasadas');
       return false;
@@ -288,9 +283,7 @@ export default function ReservaForm({
       
       // Validar que la reserva esté dentro del horario
       let esValido = true;
-      
 
-      
       if (minCierre > minApertura) {
         // Horario normal (ej: 08:00-22:00)
         esValido = minInicioReserva >= minApertura && minFinReserva <= minCierre;
@@ -298,9 +291,7 @@ export default function ReservaForm({
         // Horario que cruza medianoche (ej: 08:00-00:00)
         esValido = (minInicioReserva >= minApertura) && (minFinReserva <= minCierre || minFinReserva <= 1440);
       }
-      
 
-      
       if (!esValido) {
         setError(`El horario seleccionado está fuera del horario disponible (${horarioDisponible})`);
         return false;
@@ -338,8 +329,7 @@ export default function ReservaForm({
           }
           
           costoReserva = Math.round(diferenciaHoras * canchaSeleccionada.tarifa_hora * 100) / 100;
-        } catch (error) {
-          console.error('Error calculando costo:', error);
+        } catch {
           costoReserva = 0;
         }
       }

@@ -9,8 +9,6 @@ export async function POST() {
     return NextResponse.json(resultado);
     
   } catch (error) {
-    console.error('❌ Error en auto-cancelación:', error);
-    
     return NextResponse.json(
       {
         success: false,

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Reserva, Cliente, Cancha } from '@/types';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import ReservaForm from '@/components/reservas/ReservaForm';
 import ReservasList from '@/components/reservas/ReservasList';
-
+import { useRealtimeReservas, useCanchasRealtime } from '@/lib/useRealtime';
 import { useRouter } from 'next/navigation';
 
 // Importar las acciones del servidor
@@ -31,8 +31,7 @@ export default function ReservasPage() {
   const [errorMessage, setErrorMessage] = useState('');
 
   // Cargar datos al inicio
-  useEffect(() => {
-    const cargarDatos = async () => {
+  const cargarDatos = useCallback(async () => {
       setErrorMessage('');
       
       try {
@@ -77,18 +76,15 @@ export default function ReservasPage() {
         // Cargar los clientes activos, reservas y canchas
         const [clientesData, reservasData, canchasData] = await Promise.all([
           obtenerClientesActivos().catch(error => {
-            console.error('Error al cargar clientes:', error);
-            setErrorMessage('Error al cargar clientes: ' + error.message);
+                        setErrorMessage('Error al cargar clientes: ' + error.message);
             return [];
           }),
           obtenerReservas().catch(error => {
-            console.error('Error al cargar reservas:', error);
-            setErrorMessage('Error al cargar reservas: ' + error.message);
+                        setErrorMessage('Error al cargar reservas: ' + error.message);
             return [];
           }),
           obtenerCanchasDisponibles().catch(error => {
-            console.error('Error al cargar canchas:', error);
-            setErrorMessage('Error al cargar canchas: ' + error.message);
+                        setErrorMessage('Error al cargar canchas: ' + error.message);
             return [];
           })
         ]);
@@ -99,13 +95,27 @@ export default function ReservasPage() {
         
 
       } catch (error) {
-        console.error('Error al cargar datos:', error);
         setErrorMessage('Error al cargar los datos: ' + (error as Error).message);
       }
-    };
-
-    cargarDatos();
   }, []);
+
+  // Hooks de Realtime optimizados
+  const { isConnected: reservasConnected, error: reservasError } = useRealtimeReservas(() => {
+    setTimeout(() => {
+      cargarDatos();
+    }, 100);
+  });
+
+  const { isConnected: canchasConnected } = useCanchasRealtime(() => {
+    setTimeout(() => {
+      cargarDatos();
+    }, 100);
+  });
+
+  // Efecto para cargar datos al inicio
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
 
   const handleSubmitReserva = async (reserva: Omit<Reserva, 'id_reserva'>) => {
     try {
@@ -125,8 +135,7 @@ export default function ReservasPage() {
       setReservaEditando(undefined);
       router.refresh();
     } catch (error) {
-      console.error('Error al procesar reserva:', error);
-      setErrorMessage((error as Error).message || 'Error al procesar la reserva');
+            setErrorMessage((error as Error).message || 'Error al procesar la reserva');
     }
   };
 
@@ -138,6 +147,25 @@ export default function ReservasPage() {
 
   return (
     <div className="container mx-auto px-4 py-6">
+      {/* Indicador de estado de conexión Realtime */}
+      <div className="mb-4 flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full ${reservasConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <span className="text-sm text-gray-600">
+            Reservas: {reservasConnected ? 'Conectado' : 'Desconectado'}
+          </span>
+          {reservasError && (
+            <span className="text-red-500 text-xs">({reservasError})</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full ${canchasConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <span className="text-sm text-gray-600">
+            Canchas: {canchasConnected ? 'Conectado' : 'Desconectado'}
+          </span>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center mb-6">
         {!mostrarFormulario && (
           <button
@@ -182,9 +210,8 @@ export default function ReservasPage() {
               const nuevasReservas = await obtenerReservas();
               setReservas(nuevasReservas);
               router.refresh();
-            } catch (error) {
-              console.error('Error al eliminar reserva:', error);
-              setErrorMessage('Error al eliminar la reserva');
+            } catch {
+                            setErrorMessage('Error al eliminar la reserva');
             }
           }}
 
@@ -194,9 +221,8 @@ export default function ReservasPage() {
               const nuevasReservas = await obtenerReservas();
               setReservas(nuevasReservas);
               router.refresh();
-            } catch (error) {
-              console.error('Error al cambiar estado:', error);
-              setErrorMessage('Error al cambiar el estado de la reserva');
+            } catch {
+                            setErrorMessage('Error al cambiar el estado de la reserva');
             }
           }}
         />
