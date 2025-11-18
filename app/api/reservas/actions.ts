@@ -1,6 +1,7 @@
 'use server';
 
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
@@ -666,11 +667,6 @@ export async function obtenerCanchasDisponibles() {
   }
 }
 
-// Función para recalcular el costo de todas las reservas existentes
-// Útil para migrar reservas que no tienen el campo costo_reserva
-// ==================== FUNCIONES PARA DASHBOARD ====================
-
-// Obtener estadísticas generales del dashboard
 export async function obtenerEstadisticasDashboard() {
   try {
     const supabase = createServerComponentClient({ cookies });
@@ -684,10 +680,6 @@ export async function obtenerEstadisticasDashboard() {
     
     const inicioMesStr = obtenerFechaLocal(inicioDelMes);
     const finMesStr = obtenerFechaLocal(finDelMes);
-    
-
-    
-    // Reservas confirmadas del día
     const { data: reservasConfirmadas, error: errorConfirmadas } = await supabase
       .from('reserva')
       .select('id_reserva, estado_reserva, fecha_reserva')
@@ -696,10 +688,6 @@ export async function obtenerEstadisticasDashboard() {
     
     if (errorConfirmadas) {
           }
-    
-
-    
-    // Reservas pendientes del día
     const { data: reservasPendientes, error: errorPendientes } = await supabase
       .from('reserva')
       .select('id_reserva, estado_reserva, fecha_reserva')
@@ -708,10 +696,6 @@ export async function obtenerEstadisticasDashboard() {
     
     if (errorPendientes) {
           }
-    
-
-    
-    // Reservas de hoy para ingresos (todas las no canceladas)
     const { data: reservasHoy, error: errorIngresos } = await supabase
       .from('reserva')
       .select('id_reserva, costo_reserva, estado_reserva, fecha_reserva')
@@ -742,8 +726,6 @@ export async function obtenerEstadisticasDashboard() {
     
     const ingresosMensuales = reservasMensuales?.reduce((total, reserva) => 
       total + (reserva.costo_reserva || 0), 0) || 0;
-    
-    // Total de canchas y disponibles
     const { data: canchas, error: errorCanchas } = await supabase
       .from('cancha')
       .select('id_cancha, estado_cancha');
@@ -802,7 +784,7 @@ export async function obtenerEstadisticasDashboard() {
   }
 }
 
-// Función de debug para verificar datos directamente
+
 // Obtener datos para gráfico de reservas por horario
 export async function obtenerReservasPorHorario() {
   try {
@@ -1088,8 +1070,12 @@ export async function obtenerHorariosDisponibles() {
         }
       }
       
+
+      const horariosOcupadosIndividuales = Array.from(horariosReservados).sort();
+
       return {
-        horariosOcupados: rangosOcupados,
+        horariosOcupados: rangosOcupados, // Para mostrar rangos completos
+        horariosOcupadosIndividuales: horariosOcupadosIndividuales, // Para mostrar horarios individuales
         horariosDisponibles: horariosDisponibles,
         horariosPasados: horariosPasados,
         canchaEnMantenimiento: !!canchaEnMantenimiento, // Forzar boolean
@@ -1099,7 +1085,7 @@ export async function obtenerHorariosDisponibles() {
     
     return canchas?.map(cancha => {
       const reservasCancha = reservasHoy?.filter(r => r.id_cancha === cancha.id_cancha) || [];
-      const { horariosOcupados, horariosDisponibles, horariosPasados, canchaEnMantenimiento, estadoCancha } = generarHorariosCompletos(cancha, reservasCancha);
+      const { horariosOcupados, horariosOcupadosIndividuales, horariosDisponibles, horariosPasados, canchaEnMantenimiento, estadoCancha } = generarHorariosCompletos(cancha, reservasCancha);
       
       return {
         id_cancha: cancha.id_cancha,
@@ -1108,6 +1094,7 @@ export async function obtenerHorariosDisponibles() {
         tarifa_hora: cancha.tarifa_hora || 0,
         disponibilidad_horaria: cancha.disponibilidad_horaria || '08:00-23:00',
         horariosOcupados,
+        horariosOcupadosIndividuales,
         horariosDisponibles,
         horariosPasados,
         canchaEnMantenimiento,
@@ -1170,16 +1157,22 @@ export async function obtenerReservasDelDia(limite = 20) {
   }
 }
 
-// ==========================================
-// SISTEMA DE CANCELACIÓN AUTOMÁTICA
-// ==========================================
+
 
 // Función para obtener reservas pendientes que exceden el tiempo límite
 export async function obtenerReservasPendientesVencidas(tiempoLimiteMinutos = 5) {
-  const supabase = createServerComponentClient({ cookies });
+  // Usar Service Role Key para procesos automáticos (no cookies de usuario)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    return [];
+  }
+  
+  const supabase = createClient(supabaseUrl, supabaseKey);
   
   try {
-    await verificarConectividad(supabase);
+    // No necesitamos verificar conectividad de usuario para procesos automáticos
     
     // Calcular el timestamp límite (5 minutos atrás)
     const tiempoLimite = new Date();
@@ -1203,10 +1196,18 @@ export async function obtenerReservasPendientesVencidas(tiempoLimiteMinutos = 5)
 
 // Función para cancelar automáticamente reservas pendientes vencidas
 export async function cancelarReservasPendientesVencidas() {
-  const supabase = createServerComponentClient({ cookies });
+  // Usar Service Role Key para procesos automáticos (no cookies de usuario)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  
+  const supabase = createClient(supabaseUrl, supabaseKey);
   
   try {
-    await verificarConectividad(supabase);
+    // No necesitamos verificar conectividad de usuario para procesos automáticos
     
     // Obtener reservas vencidas
     const reservasVencidas = await obtenerReservasPendientesVencidas();

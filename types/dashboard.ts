@@ -35,7 +35,8 @@ export interface HorarioDisponible {
   tipo: string;
   tarifa_hora: number;
   disponibilidad_horaria: string;
-  horariosOcupados: string[];
+  horariosOcupados: string[]; // Rangos completos como "22:00-23:00"
+  horariosOcupadosIndividuales: string[]; // Horarios individuales como "22:00"
   horariosDisponibles: string[];
   horariosPasados: string[];
   canchaEnMantenimiento: boolean;

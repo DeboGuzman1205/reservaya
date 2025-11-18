@@ -288,6 +288,67 @@ export const realtimeNotifications = {
     );
   },
 
+  // Pagos
+  nuevoPago: (monto: string, idPago: string) => {
+    notifications.success(
+      `💰 Nuevo pago recibido ${monto}`,
+      {
+        icon: '💳',
+        duration: 6000,
+        style: {
+          background: '#059669',
+          color: '#fff',
+          fontWeight: 'bold'
+        }
+      }
+    );
+  },
+
+  pagoAprobado: (monto: string, idPago: string) => {
+    notifications.success(
+      `🎉 ¡Pago aprobado! ${monto}`,
+      {
+        icon: '✅',
+        duration: 5000,
+        style: {
+          background: '#059669',
+          color: '#fff',
+          fontWeight: 'bold'
+        }
+      }
+    );
+  },
+
+  pagoCancelado: (monto: string, idPago: string) => {
+    notifications.error(
+      `❌ Pago cancelado ${monto}`,
+      {
+        icon: '🚫',
+        duration: 4000,
+      }
+    );
+  },
+
+  pagoActualizado: (estado: string, monto: string) => {
+    const estadoEmoji = estado === 'pendiente' ? '⏳' : estado === 'desconocido' ? '❓' : '📝';
+    notifications.info(
+      `${estadoEmoji} Pago ${estado} ${monto}`,
+      {
+        duration: 4000,
+      }
+    );
+  },
+
+  pagoEliminado: (identificador: string) => {
+    notifications.warning(
+      `Pago eliminado: ${identificador}`,
+      {
+        icon: '🗑️',
+        duration: 4000,
+      }
+    );
+  },
+
   // Conexión Realtime - Usando sistema con debounce
   conectado: () => {
     notifications.connectionStatus(true);

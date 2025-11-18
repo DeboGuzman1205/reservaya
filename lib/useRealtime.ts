@@ -20,7 +20,7 @@ function callNotification(method: string, ...args: unknown[]) {
   });
 }
 
-type TablaSupabase = 'reserva' | 'cancha' | 'cliente';
+type TablaSupabase = 'reserva' | 'cancha' | 'cliente' | 'pago';
 type RealtimePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
 interface UseRealtimeOptions {
@@ -37,13 +37,12 @@ interface UseDashboardRealtimeOptions {
   onReservaChange?: () => void;
   onCanchaChange?: () => void;
   onClienteChange?: () => void;
+  onPagoChange?: () => void;
   enabled?: boolean;
   autoReconnect?: boolean;
 }
 
-// ========================================================================================
-// GESTOR CENTRALIZADO DE CANALES REALTIME
-// ========================================================================================
+
 
 interface ChannelInfo {
   channel: RealtimeChannel;
@@ -205,6 +204,8 @@ class RealtimeChannelManager {
         this.handleCanchaNotification(event, data, oldData);
       } else if (tabla === 'cliente') {
         this.handleClienteNotification(event, data, oldData);
+      } else if (tabla === 'pago') {
+        this.handlePagoNotification(event, data, oldData);
       }
     } catch {
       // Silencioso en producción
@@ -287,6 +288,34 @@ class RealtimeChannelManager {
       case 'DELETE':
         const clienteEliminado = (oldData?.nombre as string) || `Cliente #${oldData?.id_cliente || 'ID desconocido'}`;
         callNotification('clienteEliminado', clienteEliminado);
+        break;
+    }
+  }
+
+  private handlePagoNotification(evento: string, data: Record<string, unknown>, oldData?: Record<string, unknown>) {
+    const monto = (data.monto as number) || 0;
+    const estadoPago = (data.estado_pago as string) || '';
+    const montoFormateado = monto ? `$${monto.toLocaleString()}` : '';
+    const idPago = (data.id_pago as number) || 0;
+
+    switch (evento) {
+      case 'INSERT':
+        callNotification('nuevoPago', montoFormateado, idPago.toString());
+        break;
+      case 'UPDATE':
+        const estadoAnterior = (oldData?.estado_pago as string) || '';
+        if (estadoAnterior !== estadoPago) {
+          if (estadoPago === 'aprobado') {
+            callNotification('pagoAprobado', montoFormateado, idPago.toString());
+          } else if (estadoPago === 'cancelado') {
+            callNotification('pagoCancelado', montoFormateado, idPago.toString());
+          } else {
+            callNotification('pagoActualizado', estadoPago, montoFormateado);
+          }
+        }
+        break;
+      case 'DELETE':
+        callNotification('pagoEliminado', `Pago #${idPago}`);
         break;
     }
   }
@@ -437,7 +466,7 @@ class RealtimeChannelManager {
     this.globalConnectionState = newState;
   }
 
-  // Métodos públicos
+
   subscribe(
     tabla: TablaSupabase, 
     subscriberId: string,
@@ -557,9 +586,7 @@ class RealtimeChannelManager {
   }
 }
 
-// ========================================================================================
-// HOOKS OPTIMIZADOS
-// ========================================================================================
+
 
 const channelManager = RealtimeChannelManager.getInstance();
 
@@ -643,9 +670,7 @@ const useRealtimeSubscription = (options: UseRealtimeOptions) => {
   };
 };
 
-// ========================================================================================
-// HOOKS ESPECIALIZADOS
-// ========================================================================================
+
 
 export const useRealtimeReservas = (onUpdate?: (payload: RealtimePayload) => void) => {
   return useRealtimeSubscription({
@@ -674,12 +699,19 @@ export const useRealtimeClientes = (onUpdate?: (payload: RealtimePayload) => voi
   });
 };
 
-// ========================================================================================
-// HOOKS PARA COMPATIBILIDAD
-// ========================================================================================
+export const useRealtimePagos = (onUpdate?: (payload: RealtimePayload) => void) => {
+  return useRealtimeSubscription({
+    tabla: 'pago',
+    onInsert: onUpdate,
+    onUpdate: onUpdate,
+    onDelete: onUpdate
+  });
+};
+
+
 
 export const useDashboardRealtime = (options: UseDashboardRealtimeOptions) => {
-  const { onReservaChange, onCanchaChange, onClienteChange, enabled = true } = options;
+  const { onReservaChange, onCanchaChange, onClienteChange, onPagoChange, enabled = true } = options;
 
   const reservaSubscription = useRealtimeReservas(onReservaChange ? () => {
     setTimeout(() => onReservaChange(), 50);
@@ -693,16 +725,22 @@ export const useDashboardRealtime = (options: UseDashboardRealtimeOptions) => {
     setTimeout(() => onClienteChange(), 50);
   } : undefined);
 
+  const pagoSubscription = useRealtimePagos(onPagoChange ? () => {
+    setTimeout(() => onPagoChange(), 50);
+  } : undefined);
+
   const isConnected = enabled && (
     reservaSubscription.isConnected && 
     canchaSubscription.isConnected &&
-    clienteSubscription.isConnected
+    clienteSubscription.isConnected &&
+    pagoSubscription.isConnected
   );
 
   const errors = [
     reservaSubscription.error, 
     canchaSubscription.error,
-    clienteSubscription.error
+    clienteSubscription.error,
+    pagoSubscription.error
   ].filter(Boolean);
 
   return {
@@ -712,21 +750,25 @@ export const useDashboardRealtime = (options: UseDashboardRealtimeOptions) => {
       reservas: reservaSubscription.isConnected,
       canchas: canchaSubscription.isConnected,
       clientes: clienteSubscription.isConnected,
+      pagos: pagoSubscription.isConnected,
     },
     reconnectAttempts: {
       reservas: reservaSubscription.reconnectAttempts,
       canchas: canchaSubscription.reconnectAttempts,
       clientes: clienteSubscription.reconnectAttempts,
+      pagos: pagoSubscription.reconnectAttempts,
     },
     disconnect: () => {
       reservaSubscription.disconnect();
       canchaSubscription.disconnect();
       clienteSubscription.disconnect();
+      pagoSubscription.disconnect();
     },
     reconnect: () => {
       reservaSubscription.reconnect();
       canchaSubscription.reconnect();
       clienteSubscription.reconnect();
+      pagoSubscription.reconnect();
     }
   };
 };
@@ -744,9 +786,7 @@ export const useClientesRealtime = (onDataChange?: () => void) => {
   return useRealtimeClientes(onDataChange ? () => setTimeout(() => onDataChange(), 50) : undefined);
 };
 
-// ========================================================================================
-// FUNCIONES GLOBALES
-// ========================================================================================
+
 
 export const disconnectAllRealtime = () => {
   channelManager.disconnectAll();

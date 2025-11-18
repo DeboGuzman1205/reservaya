@@ -1,0 +1,5 @@
+{
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "typescript.disableAutomaticTypeAcquisition": false,
+  "typescript.updateImportsOnFileMove.enabled": "always"
+}

@@ -100,13 +100,13 @@ export default function ReservasPage() {
   }, []);
 
   // Hooks de Realtime optimizados
-  const { isConnected: reservasConnected, error: reservasError } = useRealtimeReservas(() => {
+  useRealtimeReservas(() => {
     setTimeout(() => {
       cargarDatos();
     }, 100);
   });
 
-  const { isConnected: canchasConnected } = useCanchasRealtime(() => {
+  useCanchasRealtime(() => {
     setTimeout(() => {
       cargarDatos();
     }, 100);
@@ -147,25 +147,6 @@ export default function ReservasPage() {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Indicador de estado de conexión Realtime */}
-      <div className="mb-4 flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <div className={`w-3 h-3 rounded-full ${reservasConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm text-gray-600">
-            Reservas: {reservasConnected ? 'Conectado' : 'Desconectado'}
-          </span>
-          {reservasError && (
-            <span className="text-red-500 text-xs">({reservasError})</span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <div className={`w-3 h-3 rounded-full ${canchasConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm text-gray-600">
-            Canchas: {canchasConnected ? 'Conectado' : 'Desconectado'}
-          </span>
-        </div>
-      </div>
-
       <div className="flex justify-between items-center mb-6">
         {!mostrarFormulario && (
           <button

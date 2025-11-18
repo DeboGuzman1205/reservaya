@@ -6,7 +6,6 @@ export interface Cancha {
     disponibilidad_horaria?: string;
     estado?: string;
     tarifa_hora: number;
-    // Campos adicionales para retrocompatibilidad
     nombre_cancha?: string;
     tipo_cancha?: string;
     estado_cancha?: 'disponible' | 'no disponible' | 'mantenimiento';
@@ -33,12 +32,11 @@ export interface Reserva {
     id_cancha: number;
     costo_reserva: number;
     created_at?: string;
-    // Campos adicionales que no existen en la BD pero se usan en la app
+
     costo_total?: number;
     observaciones?: string;
     cliente?: Cliente;
     cancha?: Cancha;
-    // Campos adicionales para retrocompatibilidad
     fecha?: string;
     cliente_id?: number;
     cancha_id?: number;
@@ -46,14 +44,15 @@ export interface Reserva {
 
 export interface Pago {
     id_pago: number;
-    monto: number;
-    estado: 'pendiente' | 'completado' | 'cancelado';
-    mp_id: string | null;
-    fecha_pago: string;
     id_reserva: number;
+    monto: number;
+    estado_pago: 'aprobado' | 'pendiente' | 'cancelado' | 'desconocido';
+    mp_id?: string | null;
+    fecha_pago: string;
+    reserva?: Reserva;
 }
 
-// Interface para las estadísticas del dashboard
+
 export interface DashboardStats {
     totalReservations: number;
     activeReservations: number;

@@ -36,7 +36,7 @@ export default function CanchasPage() {
     }, []);
 
     // Hook de Realtime optimizado - se actualiza automáticamente cuando hay cambios
-    const { isConnected, error: realtimeError } = useCanchasRealtime(() => {
+    useCanchasRealtime(() => {
         // Recargar datos cuando hay cambios en tiempo real
         setTimeout(() => {
             cargarCanchas();
@@ -140,17 +140,6 @@ export default function CanchasPage() {
 
     return (
         <div className="container mx-auto px-4 py-6">
-            {/* Indicador de estado de conexión Realtime */}
-            <div className="mb-4 flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-                <span className="text-sm text-gray-600">
-                    Sincronización: {isConnected ? 'Conectado' : 'Desconectado'}
-                </span>
-                {realtimeError && (
-                    <span className="text-red-500 text-sm">({realtimeError})</span>
-                )}
-            </div>
-
             <div className="flex justify-between items-center mb-6">
                 {!mostrarFormulario && (
                     <button

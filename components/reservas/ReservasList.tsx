@@ -133,6 +133,7 @@ export const ReservasList = ({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nro. Reserva</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Horario</th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
@@ -145,7 +146,7 @@ export const ReservasList = ({
           <tbody className="bg-white divide-y divide-gray-200">
             {reservasFiltradas.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                   {mostrarTodasLasFechas 
                     ? "No se encontraron reservas" 
                     : fechaFiltro === new Date().toISOString().split('T')[0]
@@ -157,6 +158,9 @@ export const ReservasList = ({
             ) : (
               reservasFiltradas.map((reserva) => (
                 <tr key={reserva.id_reserva} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    #{reserva.id_reserva}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {formatearFecha(reserva.fecha_reserva)}
                   </td>

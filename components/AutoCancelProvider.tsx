@@ -34,7 +34,6 @@ export const AutoCancelProvider = ({ children }: AutoCancelProviderProps) => {
           }
         }
       } catch (error) {
-        console.error('Error al verificar cancelaciones automáticas:', error);
       }
     };
 
