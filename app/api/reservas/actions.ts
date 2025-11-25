@@ -707,11 +707,22 @@ export async function obtenerEstadisticasDashboard() {
     
 
     
-    // Ingresos del día
-    const ingresosDiarios = reservasHoy?.reduce((total, reserva) => {
-      const costo = reserva.costo_reserva || 0;
-
-      return total + costo;
+    // Ingresos del día (basado en pagos aprobados)
+    const { data: pagosHoy, error: errorPagos } = await supabase
+      .from('pago')
+      .select('monto, fecha_pago')
+      .eq('estado_pago', 'aprobado');
+    
+    if (errorPagos) {
+      console.error('Error al obtener pagos diarios:', errorPagos);
+    }
+    
+    const ingresosDiarios = pagosHoy?.filter(pago => {
+      // Extraer solo la fecha del timestamp (YYYY-MM-DD)
+      const fechaPago = pago.fecha_pago?.split('T')[0] || pago.fecha_pago || '';
+      return fechaPago === fechaHoy;
+    }).reduce((total, pago) => {
+      return total + (pago.monto || 0);
     }, 0) || 0;
     
 
@@ -719,13 +730,27 @@ export async function obtenerEstadisticasDashboard() {
     // Reservas mensuales e ingresos
     const { data: reservasMensuales } = await supabase
       .from('reserva')
-      .select('costo_reserva, fecha_reserva')
+      .select('fecha_reserva')
       .gte('fecha_reserva', inicioMesStr)
       .lte('fecha_reserva', finMesStr)
       .neq('estado_reserva', 'cancelada');
     
-    const ingresosMensuales = reservasMensuales?.reduce((total, reserva) => 
-      total + (reserva.costo_reserva || 0), 0) || 0;
+    // Ingresos mensuales (basado en pagos aprobados)
+    const { data: pagosMensuales, error: errorPagosMensuales } = await supabase
+      .from('pago')
+      .select('monto, fecha_pago')
+      .eq('estado_pago', 'aprobado');
+    
+    if (errorPagosMensuales) {
+      console.error('Error al obtener pagos mensuales:', errorPagosMensuales);
+    }
+    
+    const ingresosMensuales = pagosMensuales?.filter(pago => {
+      // Extraer solo la fecha del timestamp (YYYY-MM-DD)
+      const fechaPago = pago.fecha_pago?.split('T')[0] || pago.fecha_pago || '';
+      return fechaPago >= inicioMesStr && fechaPago <= finMesStr;
+    }).reduce((total, pago) => 
+      total + (pago.monto || 0), 0) || 0;
     const { data: canchas, error: errorCanchas } = await supabase
       .from('cancha')
       .select('id_cancha, estado_cancha');

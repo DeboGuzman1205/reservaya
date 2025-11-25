@@ -61,12 +61,7 @@ export default function Navbar({ title }: NavbarProps) {
           </div>
         )}
 
-        <div className="relative">
-          <button className="relative p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none">
-            <BellIcon className="h-6 w-6" />
-            <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
-          </button>
-        </div>
+    
         
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">

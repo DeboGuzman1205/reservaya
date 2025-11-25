@@ -15,7 +15,6 @@ interface UsePagosRealtimeResult {
   pagos: Pago[];
   loading: boolean;
   error: string | null;
-  refresh: () => Promise<void>;
   crearPago: (pago: Omit<Pago, 'id_pago' | 'fecha_pago'>) => Promise<void>;
   actualizarPago: (id_pago: number, data: { estado_pago: string; mp_id?: string }) => Promise<void>;
 }
@@ -47,11 +46,7 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
     }
   }, []);
 
-  // Función para refrescar datos
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    await loadPagos();
-  }, [loadPagos]);
+
 
   // Función para crear pago
   const crearPago = useCallback(async (nuevoPago: Omit<Pago, 'id_pago' | 'fecha_pago'>) => {
@@ -71,7 +66,10 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
 
       notifications.success(`Pago de $${nuevoPago.monto.toLocaleString()} creado exitosamente`);
       
-      // No necesitamos actualizar manualmente, realtime se encarga
+      // Recargar datos manualmente como fallback del realtime
+      setTimeout(() => {
+        loadPagos();
+      }, 500);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al crear pago';
       setError(errorMessage);
@@ -115,7 +113,10 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
         });
       }
       
-      // No necesitamos actualizar manualmente, realtime se encarga
+      // Recargar datos manualmente como fallback del realtime
+      setTimeout(() => {
+        loadPagos();
+      }, 500);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al actualizar pago';
       setError(errorMessage);
@@ -146,6 +147,7 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
             table: 'pago'
           },
           async (payload) => {
+            console.log('Evento realtime recibido en pagos:', payload.eventType, payload);
             
             if (!mounted) return;
 
@@ -180,16 +182,23 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
             }
 
             // Recargar datos cuando hay cambios
+            console.log('Recargando datos de pagos por evento realtime...');
             try {
               await loadPagos();
-            } catch {
+              console.log('Datos de pagos recargados exitosamente');
+            } catch (error) {
+              console.error('Error al recargar datos de pagos:', error);
             }
           }
         )
         .subscribe((status) => {
+          console.log('Estado del canal realtime pagos:', status);
           
           // Verificar estado de error del realtime
           if (status && typeof status === 'string' && status.includes('ERROR')) {
+            console.error('Error en realtime pagos:', status);
+          } else if (status === 'SUBSCRIBED') {
+            console.log('Canal de pagos suscrito correctamente');
           }
         });
     } catch {
@@ -211,7 +220,6 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
     pagos,
     loading,
     error,
-    refresh,
     crearPago,
     actualizarPago
   };

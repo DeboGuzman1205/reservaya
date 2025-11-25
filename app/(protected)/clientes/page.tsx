@@ -142,7 +142,6 @@ export default function ClientesPage() {
     return (
         <div className="container mx-auto px-4 py-6"> 
             <div className="flex justify-between items-center mb-6">
-                <a className='items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors' href='/clientes'>Volver</a>
                 {!mostrarFormulario && (
                     <button
                         onClick={() => setMostrarFormulario(true)}

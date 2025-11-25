@@ -171,7 +171,7 @@ export default function PagoModal({ isOpen, onClose, onSave, pago, title }: Pago
                     name="id_reserva"
                     value={formData.id_reserva || ''}
                     onChange={handleChange}
-                    className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                    className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed ${
                       errors.id_reserva ? 'border-red-300' : 'border-gray-300'
                     }`}
                     placeholder="Ej: 123"
@@ -195,7 +195,7 @@ export default function PagoModal({ isOpen, onClose, onSave, pago, title }: Pago
                     onChange={handleChange}
                     step="0.01"
                     min="0"
-                    className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                    className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       errors.monto ? 'border-red-300' : 'border-gray-300'
                     }`}
                     placeholder="0.00"
@@ -214,7 +214,7 @@ export default function PagoModal({ isOpen, onClose, onSave, pago, title }: Pago
                     name="estado_pago"
                     value={formData.estado_pago}
                     onChange={handleChange}
-                    className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                    className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       errors.estado_pago ? 'border-red-300' : 'border-gray-300'
                     }`}
                   >
@@ -238,7 +238,7 @@ export default function PagoModal({ isOpen, onClose, onSave, pago, title }: Pago
                     name="mp_id"
                     value={formData.mp_id || ''}
                     onChange={handleChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Opcional"
                   />
                 </div>
@@ -247,14 +247,14 @@ export default function PagoModal({ isOpen, onClose, onSave, pago, title }: Pago
                   <button
                     type="button"
                     onClick={onClose}
-                    className="flex-1 bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="flex-1 bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     disabled={isSubmitting}
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (

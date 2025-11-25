@@ -101,14 +101,17 @@ export default function DashboardPage() {
     setTimeout(cargarDatos, 100);
   }, [cargarDatos]);
 
+  // Callback para cambios en pagos
+  const onPagoChange = useCallback(() => {
+    // Recargar estadísticas cuando hay cambios en pagos para actualizar ingresos
+    setTimeout(cargarDatos, 500);
+  }, [cargarDatos]);
+
   // Configurar suscripciones de Realtime
   useDashboardRealtime({
     onReservaChange,
     onCanchaChange,
-    onPagoChange: () => {
-      // Las notificaciones de pagos se manejan automáticamente a través del sistema de realtime
-      // No necesitamos recargar datos aquí, solo queremos las notificaciones
-    },
+    onPagoChange,
     enabled: true
   });
 
