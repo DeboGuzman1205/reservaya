@@ -233,7 +233,7 @@ export default function DashboardPage() {
         <StatCard 
           title="Ingresos Diarios"
           value={`$${statsData.ingresosDiarios.toLocaleString()}`}
-          description="Ingresos estimados hoy"
+          description="Total de pagos aprobados hoy"
           icon={<CurrencyDollarIcon className="h-6 w-6" />}
         />
       </div>

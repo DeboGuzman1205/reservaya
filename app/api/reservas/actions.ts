@@ -292,7 +292,7 @@ export async function crearReserva(reserva: Omit<Reserva, 'id_reserva'>) {
     fecha_reserva: reserva.fecha_reserva || reserva.fecha,
     hora_inicio: reserva.hora_inicio,
     hora_fin: reserva.hora_fin,
-    estado_reserva: reserva.estado_reserva || 'pendiente',
+    estado_reserva: 'pendiente',
     id_cliente: reserva.id_cliente,
     id_cancha: reserva.id_cancha,
     costo_reserva: costoReserva
@@ -707,7 +707,6 @@ export async function obtenerEstadisticasDashboard() {
     
 
     
-    // Ingresos del día (basado en pagos aprobados)
     const { data: pagosHoy, error: errorPagos } = await supabase
       .from('pago')
       .select('monto, fecha_pago')
@@ -718,9 +717,18 @@ export async function obtenerEstadisticasDashboard() {
     }
     
     const ingresosDiarios = pagosHoy?.filter(pago => {
-      // Extraer solo la fecha del timestamp (YYYY-MM-DD)
-      const fechaPago = pago.fecha_pago?.split('T')[0] || pago.fecha_pago || '';
-      return fechaPago === fechaHoy;
+      if (!pago.fecha_pago) return false;
+      
+      const fecha = new Date(pago.fecha_pago + (pago.fecha_pago.includes('Z') ? '' : 'Z'));
+      const opciones = {
+        timeZone: 'America/Argentina/Buenos_Aires',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      } as const;
+      
+      const fechaPagoBuenosAires = new Intl.DateTimeFormat('sv-SE', opciones).format(fecha);
+      return fechaPagoBuenosAires === fechaHoy;
     }).reduce((total, pago) => {
       return total + (pago.monto || 0);
     }, 0) || 0;
@@ -735,7 +743,6 @@ export async function obtenerEstadisticasDashboard() {
       .lte('fecha_reserva', finMesStr)
       .neq('estado_reserva', 'cancelada');
     
-    // Ingresos mensuales (basado en pagos aprobados)
     const { data: pagosMensuales, error: errorPagosMensuales } = await supabase
       .from('pago')
       .select('monto, fecha_pago')
@@ -746,9 +753,18 @@ export async function obtenerEstadisticasDashboard() {
     }
     
     const ingresosMensuales = pagosMensuales?.filter(pago => {
-      // Extraer solo la fecha del timestamp (YYYY-MM-DD)
-      const fechaPago = pago.fecha_pago?.split('T')[0] || pago.fecha_pago || '';
-      return fechaPago >= inicioMesStr && fechaPago <= finMesStr;
+      if (!pago.fecha_pago) return false;
+      
+      const fecha = new Date(pago.fecha_pago + (pago.fecha_pago.includes('Z') ? '' : 'Z'));
+      const opciones = {
+        timeZone: 'America/Argentina/Buenos_Aires',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      } as const;
+      
+      const fechaPagoBuenosAires = new Intl.DateTimeFormat('sv-SE', opciones).format(fecha);
+      return fechaPagoBuenosAires >= inicioMesStr && fechaPagoBuenosAires <= finMesStr;
     }).reduce((total, pago) => 
       total + (pago.monto || 0), 0) || 0;
     const { data: canchas, error: errorCanchas } = await supabase

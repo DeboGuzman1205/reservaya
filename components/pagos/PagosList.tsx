@@ -5,9 +5,10 @@ interface PagosListProps {
   pagos: Pago[];
   onActualizarPago: (id_pago: number, data: { estado_pago: string; mp_id?: string }) => Promise<void>;
   onEditPago: (pago: Pago) => void;
+  convertirFechaABuenosAires?: (fechaUTC: string) => string;
 }
 
-export default function PagosList({ pagos, onActualizarPago, onEditPago }: PagosListProps) {
+export default function PagosList({ pagos, onActualizarPago, onEditPago, convertirFechaABuenosAires }: PagosListProps) {
   const [actualizandoPago, setActualizandoPago] = useState<number | null>(null);
 
   const getEstadoColor = (estado: string) => {
@@ -36,6 +37,12 @@ export default function PagosList({ pagos, onActualizarPago, onEditPago }: Pagos
   };
 
   const formatearFecha = (fecha: string) => {
+    // Si hay función de conversión personalizada, usarla (para Buenos Aires)
+    if (convertirFechaABuenosAires) {
+      return convertirFechaABuenosAires(fecha);
+    }
+    
+    // Fallback por defecto
     return new Date(fecha).toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',

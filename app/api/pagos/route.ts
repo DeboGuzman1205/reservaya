@@ -69,14 +69,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear el pago
     const { data: pago, error: pagoError } = await supabase
       .from('pago')
       .insert({
         id_reserva,
         monto,
         estado_pago,
-        mp_id: mp_id || null
+        mp_id: mp_id || null,
+        fecha_pago: new Date().toISOString()
       })
       .select(`
         id_pago,
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Error al crear el pago' }, { status: 500 });
     }
 
-    // Si la reserva está pendiente, cambiarla a confirmada automáticamente
+
     if (reserva.estado_reserva === 'pendiente') {
       const { error: updateError } = await supabase
         .from('reserva')

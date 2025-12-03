@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const chatId = searchParams.get('chat_id');
+    const todasLasReservas = searchParams.get('todas') === 'true'; // Parámetro para ver todas las reservas
 
     if (!chatId) {
       return NextResponse.json<ApiResponse>({
@@ -42,15 +43,24 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Obtener fecha actual en formato YYYY-MM-DD
-    const fechaActual = new Date().toISOString().split('T')[0];
+    // Obtener fecha actual en zona horaria de Argentina (UTC-3)
+    const ahora = new Date();
+    const fechaArgentina = new Date(ahora.getTime() - (3 * 60 * 60 * 1000)); // Restar 3 horas para Argentina
+    const fechaActual = fechaArgentina.toISOString().split('T')[0];
+    
+    console.log(`Hora UTC: ${ahora.toISOString()}`);
+    console.log(`Fecha Argentina: ${fechaActual}, mostrar todas: ${todasLasReservas}`);
 
     // Buscar al cliente por chat_id usando los campos reales de la tabla cliente
+    console.log(`Buscando cliente con chat_id: ${chatId}`);
+    
     const { data: cliente, error: clienteError } = await supabase
       .from('cliente')
       .select('id_cliente, nombre, apellido, telefono, chat_id')
       .eq('chat_id', chatId)
       .single();
+      
+    console.log('Cliente encontrado:', cliente);
 
     if (clienteError) {
       if (clienteError.code === 'PGRST116') {
@@ -65,15 +75,25 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Buscar reservas confirmadas del cliente desde hoy en adelante
-    const { data: reservas, error: reservasError } = await supabase
+    // Buscar reservas del cliente (confirmadas y pendientes)
+    console.log(`Buscando reservas para cliente ID: ${cliente.id_cliente}, desde fecha: ${fechaActual}`);
+    
+    let query = supabase
       .from('reserva')
       .select('id_reserva, id_cancha, fecha_reserva, hora_inicio, hora_fin, estado_reserva, costo_reserva, created_at')
       .eq('id_cliente', cliente.id_cliente)
-      .eq('estado_reserva', 'confirmada')
-      .gte('fecha_reserva', fechaActual)
+      .in('estado_reserva', ['confirmada', 'pendiente']);
+    
+    // Solo filtrar por fecha si no se solicitan todas las reservas
+    if (!todasLasReservas) {
+      query = query.gte('fecha_reserva', fechaActual);
+    }
+    
+    const { data: reservas, error: reservasError } = await query
       .order('fecha_reserva', { ascending: true })
       .order('hora_inicio', { ascending: true });
+      
+    console.log(`Reservas encontradas: ${reservas?.length || 0}`, reservas);
 
     if (reservasError) {
       return NextResponse.json<ApiResponse>({

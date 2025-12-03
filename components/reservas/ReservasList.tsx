@@ -122,7 +122,6 @@ export const ReservasList = ({
             <option value="todos">Todos los estados</option>
             <option value="pendiente">Pendiente</option>
             <option value="confirmada">Confirmada</option>
-            <option value="completada">Completada</option>
             <option value="cancelada">Cancelada</option>
           </select>
         </div>

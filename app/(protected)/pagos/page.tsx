@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePagosRealtime, type Pago } from '@/lib/usePagosRealtime';
 import PagosList from '@/components/pagos/PagosList';
 import PagoModal from '@/components/pagos/PagoModal';
@@ -12,13 +12,58 @@ export default function PagosPage() {
   const [editingPago, setEditingPago] = useState<Pago | null>(null);
   const [filtroEstado, setFiltroEstado] = useState<string>('todos');
   
-  // Función para obtener fecha actual en formato YYYY-MM-DD
   const obtenerFechaHoy = () => {
-    const hoy = new Date();
-    return hoy.toISOString().split('T')[0];
+    const opciones = {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    } as const;
+    
+    return new Intl.DateTimeFormat('sv-SE', opciones).format(new Date());
   };
   
   const [fechaFiltro, setFechaFiltro] = useState<string>(obtenerFechaHoy());
+  
+  const [paginaActual, setPaginaActual] = useState(1);
+  const pagosPorPagina = 10;
+  
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [fechaFiltro, filtroEstado]);
+  
+  const convertirFechaABuenosAires = (fechaUTC: string) => {
+    if (!fechaUTC) return 'No disponible';
+    
+    const fecha = new Date(fechaUTC + (fechaUTC.includes('Z') ? '' : 'Z'));
+    
+    const opciones: Intl.DateTimeFormatOptions = {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    };
+    
+    return new Intl.DateTimeFormat('es-AR', opciones).format(fecha);
+  };
+  
+  const obtenerFechaBuenosAires = (fechaUTC: string) => {
+    if (!fechaUTC) return '';
+    
+    const fecha = new Date(fechaUTC + (fechaUTC.includes('Z') ? '' : 'Z'));
+    
+    const opciones = {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    } as const;
+    
+    return new Intl.DateTimeFormat('sv-SE', opciones).format(fecha);
+  };
 
   const handleAgregarPago = () => {
     setEditingPago(null);
@@ -49,25 +94,37 @@ export default function PagosPage() {
     }
   };
 
+  // Filtrar pagos por estado y fecha
   const pagosFiltrados = pagos.filter(pago => {
     // Filtro por estado
     const pasaEstado = filtroEstado === 'todos' || pago.estado_pago === filtroEstado;
     
-    // Filtro por fecha
-    const fechaPago = pago.fecha_pago?.split('T')[0] || pago.fecha_pago || '';
-    const pasaFecha = fechaPago === fechaFiltro;
+    // Filtro por fecha - usar la nueva función de conversión
+    const fechaPagoBuenosAires = obtenerFechaBuenosAires(pago.fecha_pago);
+    const pasaFecha = fechaPagoBuenosAires === fechaFiltro;
     
     return pasaEstado && pasaFecha;
   });
+  
+  // Ordenar pagos por fecha (más recientes primero) - manejar fechas UTC correctamente
+  const pagosOrdenados = [...pagosFiltrados].sort((a, b) => {
+    const fechaA = new Date(a.fecha_pago + (a.fecha_pago.includes('Z') ? '' : 'Z'));
+    const fechaB = new Date(b.fecha_pago + (b.fecha_pago.includes('Z') ? '' : 'Z'));
+    return fechaB.getTime() - fechaA.getTime();
+  });
+  
+  // Calcular paginación
+  const totalPaginas = Math.ceil(pagosOrdenados.length / pagosPorPagina);
+  const indiceInicio = (paginaActual - 1) * pagosPorPagina;
+  const indiceFin = indiceInicio + pagosPorPagina;
+  const pagosPaginados = pagosOrdenados.slice(indiceInicio, indiceFin);
 
   const getEstadisticas = () => {
     // Usar la misma lógica de filtrado que los pagos mostrados en la lista
     const pagosParaStats = pagos.filter(pago => {
-      // Filtro por fecha (misma lógica que pagosFiltrados)
-      const fechaPago = pago.fecha_pago?.split('T')[0] || pago.fecha_pago || '';
-      const pasaFecha = fechaPago === fechaFiltro;
-      
-      return pasaFecha; // Solo aplicamos filtro de fecha para las estadísticas
+      // Filtro por fecha - usar la nueva función de conversión
+      const fechaPagoBuenosAires = obtenerFechaBuenosAires(pago.fecha_pago);
+      return fechaPagoBuenosAires === fechaFiltro;
     });
     
     const total = pagosParaStats.length;
@@ -278,6 +335,11 @@ export default function PagosPage() {
           
           <span className="text-sm text-gray-700">
             Total pagos {fechaFiltro === obtenerFechaHoy() ? 'hoy' : fechaFiltro.split('-').slice(1).join('/')}: {pagosFiltrados.length}
+            {totalPaginas > 1 && (
+              <span className="ml-2 text-gray-500">
+                (Página {paginaActual} de {totalPaginas})
+              </span>
+            )}
           </span>
         </div>
       </div>
@@ -291,11 +353,58 @@ export default function PagosPage() {
           </div>
         </div>
       ) : (
-        <PagosList
-          pagos={pagosFiltrados}
-          onActualizarPago={actualizarPago}
-          onEditPago={handleEditarPago}
-        />
+        <>
+          <PagosList
+            pagos={pagosPaginados}
+            onActualizarPago={actualizarPago}
+            onEditPago={handleEditarPago}
+            convertirFechaABuenosAires={convertirFechaABuenosAires}
+          />
+          
+          {/* Controles de paginación */}
+          {totalPaginas > 1 && (
+            <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <p className="text-sm text-gray-700">
+                    Mostrando {indiceInicio + 1} a {Math.min(indiceFin, pagosFiltrados.length)} de {pagosFiltrados.length} pagos
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setPaginaActual(Math.max(1, paginaActual - 1))}
+                    disabled={paginaActual === 1}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Anterior
+                  </button>
+                  
+                  {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(pagina => (
+                    <button
+                      key={pagina}
+                      onClick={() => setPaginaActual(pagina)}
+                      className={`px-3 py-1 text-sm border rounded ${
+                        pagina === paginaActual
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pagina}
+                    </button>
+                  ))}
+                  
+                  <button
+                    onClick={() => setPaginaActual(Math.min(totalPaginas, paginaActual + 1))}
+                    disabled={paginaActual === totalPaginas}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal */}

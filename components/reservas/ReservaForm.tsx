@@ -119,15 +119,15 @@ export default function ReservaForm({
     }
   };
 
-  useEffect(() => {
-  }, [canchas]);
+
   
   const obtenerFechaLocal = () => {
-    const hoy = new Date();
-    const fechaArgentina = new Date(hoy.getTime() - (3 * 60 * 60 * 1000));
-    return fechaArgentina.getFullYear() + '-' + 
-           String(fechaArgentina.getMonth() + 1).padStart(2, '0') + '-' + 
-           String(fechaArgentina.getDate()).padStart(2, '0');
+    return new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date());
   };
   
   const [fecha, setFecha] = useState<string>(reserva?.fecha_reserva || reserva?.fecha || obtenerFechaLocal());
@@ -157,9 +157,7 @@ export default function ReservaForm({
     return horarios;
   };
 
-  const [estadoReserva, setEstadoReserva] = useState<string>(
-    reserva?.estado_reserva || 'pendiente'
-  );
+  const estadoReserva = 'pendiente';
   const [error, setError] = useState<string>('');
   const [horarioDisponible, setHorarioDisponible] = useState<string>('');
   const [horariosOcupados, setHorariosOcupados] = useState<string[]>([]);
@@ -180,12 +178,10 @@ export default function ReservaForm({
         try {
           const reservas = await obtenerReservasPorFechaYCancha(fecha, canchaId);
           
-          // Generar lista de horarios ocupados (ya filtradas por la consulta)
           const ocupados = reservas.map(reserva => `${reserva.hora_inicio}-${reserva.hora_fin}`);
           setHorariosOcupados(ocupados);
-
         } catch {
-          // Error silencioso al cargar reservas existentes
+          // Error silencioso
         }
       }
     };
@@ -193,21 +189,16 @@ export default function ReservaForm({
     cargarReservasExistentes();
   }, [fecha, canchaId]);
   
-  // Auto-completar la hora de fin (1 hora después del inicio, siempre horas completas)
   useEffect(() => {
     if (horaInicio) {
       const [hora] = horaInicio.split(':').map(Number);
       const horaFin = hora + 1;
-      
-      // Si la hora de fin pasa de 23, ponerla a 00 del día siguiente (medianoche)
       const horaFinFormateada = horaFin > 23 ? '00:00' : `${horaFin.toString().padStart(2, '0')}:00`;
       setHoraFin(horaFinFormateada);
     }
   }, [horaInicio]);
   
-  // Validación del formulario
   const validarFormulario = (): boolean => {
-    // Validar que se hayan seleccionado cliente y cancha
     if (!clienteId) {
       setError('Debe seleccionar un cliente');
       return false;
@@ -218,25 +209,21 @@ export default function ReservaForm({
       return false;
     }
     
-    // Verificar que la cancha seleccionada esté disponible
     const canchaSeleccionada = canchas.find(c => c.id_cancha === canchaId);
     if (canchaSeleccionada && !esCanchaDisponible(canchaSeleccionada)) {
       setError('La cancha seleccionada no está disponible. Por favor, seleccione otra cancha.');
       return false;
     }
     
-    // Validar fecha
     if (!fecha) {
       setError('Debe seleccionar una fecha para la reserva');
       return false;
     }
     
-    // Validar que la fecha no sea en el pasado
     const [año, mes, dia] = fecha.split('-').map(Number);
-    const fechaSeleccionada = new Date(año, mes - 1, dia); // mes es 0-indexado
+    const fechaSeleccionada = new Date(año, mes - 1, dia);
     const hoy = new Date();
     
-    // Comparar solo las fechas, no las horas
     const fechaSeleccionadaSolo = new Date(fechaSeleccionada.getFullYear(), fechaSeleccionada.getMonth(), fechaSeleccionada.getDate());
     const hoySolo = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
 
@@ -245,27 +232,19 @@ export default function ReservaForm({
       return false;
     }
     
-    // Validar horas
     if (!horaInicio || !horaFin) {
       setError('Debe especificar hora de inicio y fin');
       return false;
     }
     
-    // Validar que hora de fin sea posterior a hora de inicio (permitir 00:00 como hora de cierre para cualquier horario)
     if (horaFin === '00:00') {
-      // Caso especial: cualquier reserva puede terminar a las 00:00 (cierre del complejo)
-      // Esto permite reservas como 22:00-00:00, 21:00-00:00, etc.
-      // Esto es válido siempre que la hora de inicio sea antes de medianoche
     } else if (horaFin <= horaInicio) {
       setError('La hora de finalización debe ser posterior a la hora de inicio');
       return false;
     }
-    
-    // Si hay horario disponible, validar que esté dentro del rango permitido
     if (horarioDisponible) {
       const [horaApertura, horaCierre] = horarioDisponible.split('-');
       
-      // Convertir las horas a minutos para comparación correcta
       const convertirAMinutos = (hora: string) => {
         const [h, m] = hora.split(':').map(Number);
         return h * 60 + m;
@@ -276,19 +255,12 @@ export default function ReservaForm({
       const minApertura = convertirAMinutos(horaApertura);
       let minCierre = convertirAMinutos(horaCierre);
       
-      // Si la hora de cierre es 00:00, significa medianoche del día siguiente
-      if (minCierre === 0) {
-        minCierre = 24 * 60; // 1440 minutos (medianoche del día siguiente)
-      }
+      if (minCierre === 0) minCierre = 24 * 60;
       
-      // Validar que la reserva esté dentro del horario
       let esValido = true;
-
       if (minCierre > minApertura) {
-        // Horario normal (ej: 08:00-22:00)
         esValido = minInicioReserva >= minApertura && minFinReserva <= minCierre;
       } else {
-        // Horario que cruza medianoche (ej: 08:00-00:00)
         esValido = (minInicioReserva >= minApertura) && (minFinReserva <= minCierre || minFinReserva <= 1440);
       }
 
@@ -301,7 +273,6 @@ export default function ReservaForm({
     return true;
   };
   
-  // Envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -309,7 +280,6 @@ export default function ReservaForm({
     if (!validarFormulario()) return;
     
     try {
-      // Calcular el costo de la reserva
       const canchaSeleccionada = canchas.find(c => c.id_cancha === canchaId);
       let costoReserva = 0;
       
@@ -318,7 +288,6 @@ export default function ReservaForm({
           let diferenciaHoras: number;
           
           if (horaFin === '00:00') {
-            // Reservas que terminan a medianoche
             const inicioHora = parseInt(horaInicio.split(':')[0]);
             diferenciaHoras = 24 - inicioHora;
           } else {
@@ -337,11 +306,11 @@ export default function ReservaForm({
       await onSubmit({
         id_cliente: clienteId,
         id_cancha: canchaId,
-        fecha_reserva: fecha,     // Campo real: fecha_reserva
-        hora_inicio: horaInicio,  // Campo real: hora_inicio
-        hora_fin: horaFin,        // Campo real: hora_fin
-        estado_reserva: estadoReserva, // Campo real: estado_reserva
-        costo_reserva: costoReserva // Campo real: costo_reserva
+        fecha_reserva: fecha,
+        hora_inicio: horaInicio,
+        hora_fin: horaFin,
+        estado_reserva: estadoReserva,
+        costo_reserva: costoReserva
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -352,7 +321,6 @@ export default function ReservaForm({
     }
   };
   
-  // Formato para la fecha mínima (hoy en hora Argentina)
   const fechaMinima = obtenerFechaLocal();
 
   return (
@@ -608,46 +576,71 @@ export default function ReservaForm({
                 >
                   <option value="">Seleccione hora</option>
                   {generarHorarios().map((hora) => {
-                    // Verificar si esta hora específica está ocupada por alguna reserva existente
+                    const normalizarHora = (h: string) => {
+                      if (h?.includes(':')) {
+                        const partes = h.split(':');
+                        return `${partes[0]}:${partes[1]}`;
+                      }
+                      return h;
+                    };
+
                     const estaOcupado = horariosOcupados.some(horario => {
                       const [inicioOcupado, finOcupado] = horario.split('-');
-                      
-                      // Normalizar formato de horas (remover segundos)
-                      const normalizarHora = (h: string) => {
-                        if (h && h.includes(':')) {
-                          const partes = h.split(':');
-                          return `${partes[0]}:${partes[1]}`;
-                        }
-                        return h;
-                      };
-                      
                       const inicioOcupadoNorm = normalizarHora(inicioOcupado);
                       const finOcupadoNorm = normalizarHora(finOcupado);
                       
-                      // Convertir horas a números para comparación correcta
                       const horaActual = parseInt(hora.split(':')[0]);
                       const horaInicioOcupado = parseInt(inicioOcupadoNorm.split(':')[0]);
                       let horaFinOcupado = parseInt(finOcupadoNorm.split(':')[0]);
                       
-                      // Si hora fin es 00:00, convertir a 24 para comparación
-                      if (horaFinOcupado === 0) {
-                        horaFinOcupado = 24;
-                      }
+                      if (horaFinOcupado === 0) horaFinOcupado = 24;
                       
-                      // Esta hora está ocupada si cae dentro del rango de la reserva
-                      const ocupada = horaActual >= horaInicioOcupado && horaActual < horaFinOcupado;
-                      
-                      return ocupada;
+                      return horaActual >= horaInicioOcupado && horaActual < horaFinOcupado;
                     });
+
+                    const horaYaPaso = (() => {
+                      const ahora = new Date();
+                      const fechaHoyBuenosAires = new Intl.DateTimeFormat('sv-SE', {
+                        timeZone: 'America/Argentina/Buenos_Aires',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                      }).format(ahora);
+                      
+                      if (fecha !== fechaHoyBuenosAires) return false;
+                      
+                      const horaActualBuenosAires = new Intl.DateTimeFormat('en-US', {
+                        timeZone: 'America/Argentina/Buenos_Aires',
+                        hour: 'numeric',
+                        hour12: false
+                      }).format(ahora);
+                      
+                      const horaActual = parseInt(horaActualBuenosAires);
+                      const horaOpcion = parseInt(hora.split(':')[0]);
+                      return horaOpcion <= horaActual;
+                    })();
+
+                    let className = '';
+                    let textoAdicional = '';
+                    let estaDeshabilitado = false;
+                    
+                    if (estaOcupado) {
+                      className = 'text-red-500 bg-red-50';
+                      textoAdicional = ' (Ocupado)';
+                      estaDeshabilitado = true;
+                    } else if (horaYaPaso) {
+                      className = 'text-gray-400 bg-gray-50';
+                      estaDeshabilitado = true;
+                    }
                     
                     return (
                       <option 
                         key={hora} 
                         value={hora} 
-                        disabled={estaOcupado}
-                        className={estaOcupado ? 'text-red-500 bg-red-50' : ''}
+                        disabled={estaDeshabilitado}
+                        className={className}
                       >
-                        {hora} {estaOcupado ? '(Ocupado)' : ''}
+                        {hora}{textoAdicional}
                       </option>
                     );
                   })}
@@ -680,23 +673,20 @@ export default function ReservaForm({
             </div>
           </div>
           
-          {/* Estado de la reserva */}
+          {/* Estado de la reserva - Siempre pendiente para nuevas reservas */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Estado
             </label>
             <select 
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-              value={estadoReserva}
-              onChange={(e) => setEstadoReserva(e.target.value as 'pendiente' | 'confirmada' | 'cancelada' | 'completada')}
-              disabled={isSubmitting}
+              className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm cursor-not-allowed"
+              value="pendiente"
+              disabled={true}
               required
             >
               <option value="pendiente">Pendiente</option>
-              <option value="confirmada">Confirmada</option>
-              <option value="cancelada">Cancelada</option>
-              <option value="completada">Completada</option>
             </select>
+           
           </div>
         </div>
         
@@ -710,7 +700,6 @@ export default function ReservaForm({
               let diferenciaHoras: number;
               
               if (horaFin === '00:00') {
-                // Reservas que terminan a medianoche
                 const inicioHora = parseInt(horaInicio.split(':')[0]);
                 diferenciaHoras = 24 - inicioHora;
               } else {
