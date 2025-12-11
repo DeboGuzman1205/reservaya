@@ -82,7 +82,6 @@ async function obtenerDisponibilidadCanchas(fecha: string, canchaId?: number, ti
   	  for (let hora = 8; hora <= 23; hora++) {
   	 	 horariosCompletos.push(`${hora.toString().padStart(2, '0')}:00`);
   	  }
-  	  horariosCompletos.push('00:00');
   	  
   	  const ahora = new Date();
   	  const ahoraArgentina = new Date(ahora.getTime() - (3 * 60 * 60 * 1000));

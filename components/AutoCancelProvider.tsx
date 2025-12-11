@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface AutoCancelProviderProps {
   children: React.ReactNode;
 }
 
 export const AutoCancelProvider = ({ children }: AutoCancelProviderProps) => {
+  const router = useRouter();
+
   useEffect(() => {
     const checkCancellations = async () => {
       try {
-        // Llamar al endpoint de auto-cancelar para reservas pendientes vencidas
         const response = await fetch('/api/reservas/auto-cancelar', {
           method: 'POST',
           headers: {
@@ -18,36 +20,28 @@ export const AutoCancelProvider = ({ children }: AutoCancelProviderProps) => {
           },
         });
 
-        if (!response.ok) {
-          throw new Error('Error en la respuesta del servidor');
-        }
+        if (!response.ok) return;
 
         const resultado = await response.json();
         
-        // Recargar la página si se cancelaron reservas
         if (resultado.success && resultado.canceladas > 0) {
           const currentPath = window.location.pathname;
+          
           if (currentPath.includes('/reservas') || currentPath.includes('/dashboard')) {
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
+            router.refresh();
           }
         }
-      } catch {
-        // Ignorar errores silenciosamente
-      }
+      } catch {}
     };
 
-    // Ejecutar inmediatamente
     checkCancellations();
 
-    // Configurar intervalo cada 30 segundos (más frecuente para mejor responsividad)
     const interval = setInterval(checkCancellations, 30000);
 
     return () => {
       clearInterval(interval);
     };
-  }, []);
+  }, [router]);
 
   return <>{children}</>;
 };
