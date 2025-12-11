@@ -1,4 +1,4 @@
-﻿import toast from 'react-hot-toast';
+﻿import { toast } from 'sonner';
 
 // Tipos para las notificaciones
 export type NotificationType = 'success' | 'error' | 'loading' | 'info' | 'warning';
@@ -22,7 +22,7 @@ const isBrowser = typeof window !== 'undefined';
 // Clase para manejar las notificaciones del sistema
 class NotificationManager {
   private static instance: NotificationManager;
-  private connectionToastId: string | null = null;
+  private connectionToastId: string | number | null = null;
   private connectionDebounceTimeout: NodeJS.Timeout | null = null;
   private lastConnectionState: boolean | null = null;
 
@@ -42,10 +42,7 @@ class NotificationManager {
 
   // Notificación de éxito
   success(message: string, options?: NotificationOptions) {
-    if (!this.canShowToast()) {
-      console.log('✅', message);
-      return '';
-    }
+    if (!this.canShowToast()) return '';
     return toast.success(message, {
       ...defaultOptions,
       ...options,
@@ -59,13 +56,10 @@ class NotificationManager {
 
   // Notificación de error
   error(message: string, options?: NotificationOptions) {
-    if (!this.canShowToast()) {
-      console.error('❌', message);
-      return '';
-    }
+    if (!this.canShowToast()) return '';
     return toast.error(message, {
       ...defaultOptions,
-      duration: 5000, // Los errores duran más tiempo
+      duration: 5000,
       ...options,
       style: {
         background: '#ef4444',
@@ -77,10 +71,7 @@ class NotificationManager {
 
   // Notificación informativa
   info(message: string, options?: NotificationOptions) {
-    if (!this.canShowToast()) {
-      console.info('ℹ️', message);
-      return '';
-    }
+    if (!this.canShowToast()) return '';
     return toast(message, {
       ...defaultOptions,
       ...options,
@@ -95,10 +86,7 @@ class NotificationManager {
 
   // Notificación de advertencia
   warning(message: string, options?: NotificationOptions) {
-    if (!this.canShowToast()) {
-      console.warn('⚠️', message);
-      return '';
-    }
+    if (!this.canShowToast()) return '';
     return toast(message, {
       ...defaultOptions,
       ...options,

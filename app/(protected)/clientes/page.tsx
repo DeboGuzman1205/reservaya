@@ -6,7 +6,8 @@ import { PlusIcon } from '@heroicons/react/24/outline';
 import ClienteForm from '@/components/clientes/ClienteForm';
 import ClientesList from '@/components/clientes/ClientesList';
 import { useRouter } from 'next/navigation';
-import { useRealtimeClientes } from '@/lib/useRealtime';
+import { useClientesRealtime } from '@/lib/useClientesRealtime';
+import notifications from '@/lib/notifications';
 
 // Importar las acciones del servidor
 import { 
@@ -35,9 +36,8 @@ export default function ClientesPage() {
         }
     }, []);
 
-    // Hook de Realtime optimizado - se actualiza automáticamente cuando hay cambios
-    useRealtimeClientes(() => {
-        // Recargar inmediatamente
+    // Hook de Realtime con notificaciones
+    useClientesRealtime(() => {
         cargarClientes();
     });    // Efecto para cargar clientes al montar el componente
     useEffect(() => {
@@ -56,6 +56,7 @@ export default function ClientesPage() {
             router.refresh();
         } catch {
             setErrorMessage('Error al crear el cliente. Intenta nuevamente.');
+            notifications.error('Error al crear el cliente');
                     } finally {
             setIsLoading(false);
         }
@@ -76,6 +77,7 @@ export default function ClientesPage() {
             router.refresh();
         } catch {
             setErrorMessage('Error al actualizar el cliente. Intenta nuevamente.');
+            notifications.error('Error al actualizar el cliente');
                     } finally {
             setIsLoading(false);
         }
@@ -92,6 +94,7 @@ export default function ClientesPage() {
             router.refresh();
         } catch {
             setErrorMessage('Error al eliminar el cliente. Intenta nuevamente.');
+            notifications.error('Error al eliminar el cliente');
                     } finally {
             setIsLoading(false);
         }

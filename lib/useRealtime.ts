@@ -5,21 +5,6 @@ import {
   RealtimePostgresChangesPayload,
   REALTIME_POSTGRES_CHANGES_LISTEN_EVENT
 } from '@supabase/supabase-js';
-import { realtimeNotifications } from './notifications';
-
-// Función para llamar notificaciones de manera segura
-function callNotification(method: string, ...args: unknown[]) {
-  try {
-    const methodFunction = realtimeNotifications?.[method as keyof typeof realtimeNotifications];
-    
-    if (typeof methodFunction === 'function') {
-      return (methodFunction as (...params: unknown[]) => void)(...args);
-    }
-  } catch (error) {
-    // Silencioso en producción
-    console.error('Error en notificación:', error);
-  }
-}
 
 type TablaSupabase = 'reserva' | 'cancha' | 'cliente' | 'pago';
 type RealtimePayload = RealtimePostgresChangesPayload<Record<string, unknown>>;
@@ -172,13 +157,7 @@ class RealtimeChannelManager {
     payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
     channelInfo: ChannelInfo
   ) {
-    // Ejecutar handlers de notificaciones
-    const data = event === 'DELETE' ? payload.old || {} : payload.new || {};
-    const oldData = event === 'UPDATE' ? payload.old || {} : undefined;
-
-    this.triggerNotifications(event, tabla, data, oldData);
-
-    // Ejecutar callbacks de componentes
+    // Solo ejecutar callbacks de componentes - las notificaciones se manejan en hooks específicos
     const callbackSet = event === 'INSERT' ? channelInfo.callbacks.onInsert :
                        event === 'UPDATE' ? channelInfo.callbacks.onUpdate :
                        channelInfo.callbacks.onDelete;
@@ -190,193 +169,6 @@ class RealtimeChannelManager {
         // Silencioso en producción
       }
     });
-  }
-
-  private async triggerNotifications(
-    event: string, 
-    tabla: TablaSupabase, 
-    data: Record<string, unknown>, 
-    oldData?: Record<string, unknown>
-  ) {
-    try {
-      if (tabla === 'reserva') {
-        await this.handleReservaNotification(event, data, oldData);
-      } else if (tabla === 'cancha') {
-        this.handleCanchaNotification(event, data, oldData);
-      } else if (tabla === 'cliente') {
-        this.handleClienteNotification(event, data, oldData);
-      } else if (tabla === 'pago') {
-        this.handlePagoNotification(event, data, oldData);
-      }
-    } catch {
-      // Silencioso en producción
-    }
-  }
-
-  private async handleReservaNotification(evento: string, data: Record<string, unknown>, oldData?: Record<string, unknown>) {
-    switch (evento) {
-      case 'INSERT':
-        const insertDetails = await this.getReservaDetails(data, true);
-        const horario = insertDetails.horaInicio && insertDetails.horaFin 
-          ? `${insertDetails.horaInicio} - ${insertDetails.horaFin}` 
-          : 'Horario no disponible';
-        const fechaTexto = insertDetails.fechaReserva ? ` para el ${insertDetails.fechaReserva}` : '';
-        callNotification('nuevaReserva', insertDetails.clienteNombre, insertDetails.canchaNombre, `${horario}${fechaTexto}`);
-        break;
-        
-      case 'UPDATE':
-        const updateDetails = await this.getReservaDetails(data, false);
-        const estadoAnterior = (oldData?.estado_reserva as string) || '';
-        if (estadoAnterior !== updateDetails.estadoReserva) {
-          if (updateDetails.estadoReserva === 'cancelada') {
-            const reservaId = data.id_reserva;
-            const reservaNombre = reservaId ? `Reserva #${reservaId}` : 'Reserva';
-            callNotification('reservaCancelada', reservaNombre);
-          } else {
-            callNotification('reservaActualizada', updateDetails.clienteNombre, updateDetails.canchaNombre, updateDetails.estadoReserva.toUpperCase());
-          }
-        }
-        break;
-        
-      case 'DELETE':
-        const reservaId = data.id_reserva;
-        const clienteNombre = reservaId ? `Reserva #${reservaId}` : 'Reserva';
-        callNotification('reservaCancelada', clienteNombre);
-        break;
-    }
-  }
-
-  private handleCanchaNotification(evento: string, data: Record<string, unknown>, oldData?: Record<string, unknown>) {
-    const nombreCancha = (data.nombre as string) || `Cancha #${data.id_cancha || 'ID desconocido'}`;
-    const estadoCancha = (data.estado_cancha as string) || '';
-    const tipoCancha = (data.tipo as string) || '';
-
-    switch (evento) {
-      case 'INSERT':
-        const tipoTexto = tipoCancha ? ` (${tipoCancha})` : '';
-        callNotification('nuevaCancha', `${nombreCancha}${tipoTexto}`);
-        break;
-      case 'UPDATE':
-        const estadoAnterior = (oldData?.estado_cancha as string) || '';
-        if (estadoAnterior !== estadoCancha) {
-          let cambio = `Estado: ${estadoCancha.toUpperCase()}`;
-          if (estadoCancha === 'mantenimiento') {
-            cambio = 'En mantenimiento';
-          } else if (estadoCancha === 'disponible') {
-            cambio = 'Disponible nuevamente';
-          } else if (estadoCancha === 'ocupada') {
-            cambio = 'Ocupada';
-          }
-          callNotification('canchaActualizada', nombreCancha, cambio);
-        }
-        break;
-      case 'DELETE':
-        callNotification('canchaEliminada', nombreCancha);
-        break;
-    }
-  }
-
-  private handleClienteNotification(evento: string, data: Record<string, unknown>, oldData?: Record<string, unknown>) {
-    const nombreCliente = (data.nombre as string) || `Cliente #${data.id_cliente || 'ID desconocido'}`;
-
-    switch (evento) {
-      case 'INSERT':
-        callNotification('nuevoCliente', nombreCliente);
-        break;
-      case 'UPDATE':
-        callNotification('clienteActualizado', nombreCliente);
-        break;
-      case 'DELETE':
-        const clienteEliminado = (oldData?.nombre as string) || `Cliente #${oldData?.id_cliente || 'ID desconocido'}`;
-        callNotification('clienteEliminado', clienteEliminado);
-        break;
-    }
-  }
-
-  private handlePagoNotification(evento: string, data: Record<string, unknown>, oldData?: Record<string, unknown>) {
-    const monto = (data.monto as number) || 0;
-    const estadoPago = (data.estado_pago as string) || '';
-    const montoFormateado = monto ? `$${monto.toLocaleString()}` : '';
-    const idPago = (data.id_pago as number) || 0;
-
-    switch (evento) {
-      case 'INSERT':
-        callNotification('nuevoPago', montoFormateado);
-        break;
-      case 'UPDATE':
-        const estadoAnterior = (oldData?.estado_pago as string) || '';
-        if (estadoAnterior !== estadoPago) {
-          if (estadoPago === 'aprobado') {
-            callNotification('pagoAprobado', montoFormateado);
-          } else if (estadoPago === 'cancelado') {
-            callNotification('pagoCancelado', montoFormateado);
-          } else {
-            callNotification('pagoActualizado', estadoPago, montoFormateado);
-          }
-        }
-        break;
-      case 'DELETE':
-        callNotification('pagoEliminado', `Pago #${idPago}`);
-        break;
-    }
-  }
-
-  private async getReservaDetails(reservaData: Record<string, unknown>, obtenerNombres = false) {
-    const keys = Object.keys(reservaData);
-    
-    // Caso DELETE: solo tiene id_reserva
-    if (keys.length === 1 && keys[0] === 'id_reserva') {
-      return {
-        clienteNombre: `Reserva #${reservaData.id_reserva}`,
-        canchaNombre: 'eliminada',
-        horaInicio: '',
-        horaFin: '',
-        fechaReserva: '',
-        estadoReserva: 'eliminada'
-      };
-    }
-
-    const clienteId = reservaData.id_cliente;
-    const canchaId = reservaData.id_cancha;
-
-    // Si ya hay nombres en el payload, usarlos
-    if (reservaData.cliente_nombre && reservaData.cancha_nombre) {
-      return {
-        clienteNombre: reservaData.cliente_nombre as string,
-        canchaNombre: reservaData.cancha_nombre as string,
-        horaInicio: reservaData.hora_inicio as string,
-        horaFin: reservaData.hora_fin as string,
-        fechaReserva: reservaData.fecha_reserva as string,
-        estadoReserva: reservaData.estado_reserva as string
-      };
-    }
-
-    let clienteNombre = `Cliente #${clienteId || 'desconocido'}`;
-    let canchaNombre = `Cancha #${canchaId || 'desconocida'}`;
-
-    // Solo hacer consultas si se solicitan nombres reales
-    if (obtenerNombres && clienteId && canchaId) {
-      try {
-        const [clienteResult, canchaResult] = await Promise.all([
-          supabase.from('cliente').select('nombre').eq('id_cliente', clienteId).maybeSingle(),
-          supabase.from('cancha').select('nombre').eq('id_cancha', canchaId).maybeSingle()
-        ]);
-
-        if (clienteResult.data?.nombre) clienteNombre = clienteResult.data.nombre;
-        if (canchaResult.data?.nombre) canchaNombre = canchaResult.data.nombre;
-      } catch {
-        // Mantener nombres con IDs si falla
-      }
-    }
-
-    return {
-      clienteNombre,
-      canchaNombre,
-      horaInicio: reservaData.hora_inicio as string || '',
-      horaFin: reservaData.hora_fin as string || '',
-      fechaReserva: reservaData.fecha_reserva as string || '',
-      estadoReserva: reservaData.estado_reserva as string || ''
-    };
   }
 
   private subscribeChannel(tabla: TablaSupabase, channelInfo: ChannelInfo) {
@@ -449,20 +241,6 @@ class RealtimeChannelManager {
     const allChannelsConnected = Array.from(this.channels.values()).every(ch => ch.isConnected);
     const hasActiveChannels = this.channels.size > 0;
     const newState = hasActiveChannels && allChannelsConnected;
-    
-    if (newState !== this.lastNotificationState && hasActiveChannels && this.initialized) {
-      if (newState && this.channels.size > 0) {
-        callNotification('conectado');
-      } else if (this.lastNotificationState && !newState && this.channels.size > 0) {
-        callNotification('desconectado');
-      }
-      
-      this.lastNotificationState = newState;
-    } else if (!hasActiveChannels && this.lastNotificationState) {
-      this.lastNotificationState = false;
-    } else if (!this.initialized) {
-      this.lastNotificationState = newState;
-    }
     
     this.globalConnectionState = newState;
   }

@@ -5,8 +5,10 @@ import { Reserva, Cliente, Cancha } from '@/types';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import ReservaForm from '@/components/reservas/ReservaForm';
 import ReservasList from '@/components/reservas/ReservasList';
-import { useRealtimeReservas, useCanchasRealtime } from '@/lib/useRealtime';
+import { useReservasRealtime } from '@/lib/useReservasRealtime';
+import { useCanchasRealtimeNotifications } from '@/lib/useCanchasRealtimeNotifications';
 import { useRouter } from 'next/navigation';
+import notifications from '@/lib/notifications';
 
 // Importar las acciones del servidor
 import { 
@@ -99,17 +101,13 @@ export default function ReservasPage() {
       }
   }, []);
 
-  // Hooks de Realtime optimizados
-  useRealtimeReservas(() => {
-    setTimeout(() => {
-      cargarDatos();
-    }, 100);
+  // Hooks de Realtime con notificaciones
+  useReservasRealtime(() => {
+    cargarDatos();
   });
-
-  useCanchasRealtime(() => {
-    setTimeout(() => {
-      cargarDatos();
-    }, 100);
+  
+  useCanchasRealtimeNotifications(() => {
+    cargarDatos();
   });
 
   // Efecto para cargar datos al inicio
@@ -136,6 +134,7 @@ export default function ReservasPage() {
       router.refresh();
     } catch (error) {
             setErrorMessage((error as Error).message || 'Error al procesar la reserva');
+            notifications.error(reservaEditando ? 'Error al actualizar la reserva' : 'Error al crear la reserva');
     }
   };
 
@@ -193,6 +192,7 @@ export default function ReservasPage() {
               router.refresh();
             } catch {
                             setErrorMessage('Error al eliminar la reserva');
+                            notifications.error('Error al eliminar la reserva');
             }
           }}
 
@@ -204,6 +204,7 @@ export default function ReservasPage() {
               router.refresh();
             } catch {
                             setErrorMessage('Error al cambiar el estado de la reserva');
+                            notifications.error('Error al cambiar el estado');
             }
           }}
         />

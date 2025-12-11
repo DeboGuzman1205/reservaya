@@ -6,7 +6,8 @@ import { PlusIcon } from '@heroicons/react/24/outline';
 import CanchaForm from '@/components/canchas/CanchaForm';
 import CanchasList from '@/components/canchas/CanchasList';
 import { useRouter } from 'next/navigation';
-import { useCanchasRealtime } from '@/lib/useRealtime';
+import { useCanchasRealtimeNotifications } from '@/lib/useCanchasRealtimeNotifications';
+import notifications from '@/lib/notifications';
 
 // Importar las acciones del servidor
 import { 
@@ -35,12 +36,9 @@ export default function CanchasPage() {
         }
     }, []);
 
-    // Hook de Realtime optimizado - se actualiza automáticamente cuando hay cambios
-    useCanchasRealtime(() => {
-        // Recargar datos cuando hay cambios en tiempo real
-        setTimeout(() => {
-            cargarCanchas();
-        }, 100);
+    // Hook de Realtime con notificaciones
+    useCanchasRealtimeNotifications(() => {
+        cargarCanchas();
     });
 
     // Efecto para cargar canchas al montar el componente
@@ -60,6 +58,7 @@ export default function CanchasPage() {
             router.refresh();
         } catch {
             setErrorMessage('Error al crear la cancha. Intenta nuevamente.');
+            notifications.error('Error al crear la cancha');
                     } finally {
             setIsLoading(false);
         }
@@ -80,6 +79,7 @@ export default function CanchasPage() {
             router.refresh();
         } catch {
             setErrorMessage('Error al actualizar la cancha. Intenta nuevamente.');
+            notifications.error('Error al actualizar la cancha');
                     } finally {
             setIsLoading(false);
         }
@@ -96,6 +96,7 @@ export default function CanchasPage() {
             router.refresh();
         } catch {
             setErrorMessage('Error al eliminar la cancha. Intenta nuevamente.');
+            notifications.error('Error al eliminar la cancha');
                     } finally {
             setIsLoading(false);
         }
@@ -112,6 +113,7 @@ export default function CanchasPage() {
             router.refresh();
         } catch {
             setErrorMessage('Error al cambiar el estado de la cancha. Intenta nuevamente.');
+            notifications.error('Error al cambiar el estado');
                     } finally {
             setIsLoading(false);
         }

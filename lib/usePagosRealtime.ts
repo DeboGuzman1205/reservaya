@@ -147,8 +147,6 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
             table: 'pago'
           },
           async (payload) => {
-            console.log('Evento realtime recibido en pagos:', payload.eventType, payload);
-            
             if (!mounted) return;
 
             // Mostrar notificación según el evento
@@ -182,25 +180,14 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
             }
 
             // Recargar datos cuando hay cambios
-            console.log('Recargando datos de pagos por evento realtime...');
             try {
               await loadPagos();
-              console.log('Datos de pagos recargados exitosamente');
-            } catch (error) {
-              console.error('Error al recargar datos de pagos:', error);
+            } catch {
+              // Silencioso en producción
             }
           }
         )
-        .subscribe((status) => {
-          console.log('Estado del canal realtime pagos:', status);
-          
-          // Verificar estado de error del realtime
-          if (status && typeof status === 'string' && status.includes('ERROR')) {
-            console.error('Error en realtime pagos:', status);
-          } else if (status === 'SUBSCRIBED') {
-            console.log('Canal de pagos suscrito correctamente');
-          }
-        });
+        .subscribe();
     } catch {
     }
 
