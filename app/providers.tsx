@@ -3,6 +3,14 @@
 import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { SessionContextProvider } from '@supabase/auth-helpers-react';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+// Extender Window para incluir supabase
+declare global {
+  interface Window {
+    supabase: SupabaseClient;
+  }
+}
 
 export default function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [supabaseClient] = useState(() => createClientComponentClient());
@@ -10,7 +18,7 @@ export default function SupabaseProvider({ children }: { children: React.ReactNo
   // Exponer supabase globalmente para debugging y scripts
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as any).supabase = supabaseClient;
+      window.supabase = supabaseClient;
     }
   }, [supabaseClient]);
   
