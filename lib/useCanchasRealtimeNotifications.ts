@@ -1,49 +1,35 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import notifications from './notifications';
 
-export function useCanchasRealtimeNotifications(onCanchaChange?: () => void) {
-  const callbackRef = useRef(onCanchaChange);
-  
-  // Actualizar ref cuando el callback cambie
+export function useCanchasRealtimeNotifications() {
   useEffect(() => {
-    callbackRef.current = onCanchaChange;
-  }, [onCanchaChange]);
-  
-  useEffect(() => {
-    let mounted = true;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    console.log('🔌 Intentando conectar a Realtime Canchas...');
 
-    try {
-      channel = supabase
-        .channel('canchas-global-listener')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'cancha'
-          },
-          (payload) => {
-            if (!mounted) return;
+    const channel = supabase
+      .channel('canchas-tracker-v2') // Nombre único para evitar conflictos
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Escuchar todo (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'cancha',
+        },
+        (payload) => {
+          console.log('📨 Evento recibido en Canchas:', payload); // DEBUG
+
+          // Manejo de INSERT
+          if (payload.eventType === 'INSERT') {
             const cancha = payload.new as Record<string, unknown>;
             const nombreCancha = cancha.nombre || `Cancha #${cancha.id_cancha}`;
             const tipo = cancha.tipo ? ` (${cancha.tipo})` : '';
             notifications.success(`🏟️ Nueva cancha: ${nombreCancha}${tipo}`, {
               duration: 5000
             });
-            if (callbackRef.current) callbackRef.current();
           }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'cancha'
-          },
-          (payload) => {
-            if (!mounted) return;
+          
+          // Manejo de UPDATE
+          if (payload.eventType === 'UPDATE') {
             const canchaAnterior = payload.old as Record<string, unknown>;
             const canchaNueva = payload.new as Record<string, unknown>;
             const nombreCancha = canchaNueva.nombre || `Cancha #${canchaNueva.id_cancha}`;
@@ -73,40 +59,28 @@ export function useCanchasRealtimeNotifications(onCanchaChange?: () => void) {
                 duration: 4000
               });
             }
-            if (callbackRef.current) callbackRef.current();
           }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'cancha'
-          },
-          (payload) => {
-            if (!mounted) return;
+
+          // Manejo de DELETE
+          if (payload.eventType === 'DELETE') {
             const cancha = payload.old as Record<string, unknown>;
             const nombreCancha = cancha.nombre || `Cancha #${cancha.id_cancha}`;
-            notifications.info(`🗑️ Cancha eliminada: ${nombreCancha}`, {
+            notifications.warning(`🗑️ Cancha eliminada: ${nombreCancha}`, {
               duration: 4000
             });
-            if (callbackRef.current) callbackRef.current();
           }
-        )
-        .subscribe();
-    } catch {
-      // Silencioso en producción
-    }
+        }
+      )
+      .subscribe((status) => {
+        console.log(`📡 Estado de conexión Canchas: ${status}`);
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error en el canal de realtime Canchas');
+        }
+      });
 
     return () => {
-      mounted = false;
-      if (channel) {
-        try {
-          supabase.removeChannel(channel);
-        } catch {
-          // Silencioso
-        }
-      }
+      console.log('🔌 Desconectando Realtime Canchas...');
+      supabase.removeChannel(channel);
     };
-  }, []); // Sin dependencias para que el canal persista
+  }, []);
 }

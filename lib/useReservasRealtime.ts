@@ -1,45 +1,37 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { supabase } from './supabaseClient';
 import notifications from './notifications';
 
-export function useReservasRealtime(onReservaChange?: () => void) {
-  const callbackRef = useRef(onReservaChange);
-  
-  // Actualizar ref cuando el callback cambie
+export function useReservasRealtime() {
   useEffect(() => {
-    callbackRef.current = onReservaChange;
-  }, [onReservaChange]);
-  
-  useEffect(() => {
-    let mounted = true;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    console.log('🔌 Intentando conectar a Realtime Reservas...');
 
-    try {
-      channel = supabase
-        .channel('reservas-global-listener')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'reserva'
-          },
-          async (payload) => {
-            if (!mounted) return;
+    const channel = supabase
+      .channel('reservas-tracker-v2') // Nombre único para evitar conflictos
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Escuchar todo (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'reserva',
+        },
+        async (payload) => {
+          console.log('📨 Evento recibido en Reservas:', payload); // DEBUG
 
+          // Manejo de INSERT
+          if (payload.eventType === 'INSERT') {
             const reserva = payload.new as Record<string, unknown>;
             const estado = reserva.estado_reserva as string;
             const horario = reserva.hora_inicio && reserva.hora_fin
               ? ` (${reserva.hora_inicio} - ${reserva.hora_fin})`
               : '';
 
-            // PASO 1: Notificación optimista INMEDIATA (sin esperar consultas)
-            // Esto garantiza que siempre se vea algo, incluso si las consultas fallan
+            // Notificación optimista INMEDIATA (sin esperar consultas)
             let clienteNombre = 'Cliente';
             let canchaNombre = 'Cancha';
 
             try {
-              // PASO 2: Intentar obtener datos adicionales (puede fallar en producción)
+              // Intentar obtener datos adicionales con timeout
               const idCliente = reserva.id_cliente;
               const idCancha = reserva.id_cancha;
 
@@ -57,7 +49,6 @@ export function useReservasRealtime(onReservaChange?: () => void) {
                       .eq('id_cancha', idCancha)
                       .maybeSingle()
                   ]),
-                  // Timeout de 2 segundos
                   new Promise((_, reject) => 
                     setTimeout(() => reject(new Error('Timeout')), 2000)
                   )
@@ -77,12 +68,11 @@ export function useReservasRealtime(onReservaChange?: () => void) {
                 }
               }
             } catch {
-              // Si falla, usar valores por defecto (ya están asignados)
               clienteNombre = `Cliente #${reserva.id_cliente}`;
               canchaNombre = `Cancha #${reserva.id_cancha}`;
             }
 
-            // PASO 3: Mostrar notificación con los datos disponibles
+            // Mostrar notificación
             if (estado === 'pendiente') {
               notifications.warning(
                 `⏳ Reserva pendiente: ${clienteNombre} - ${canchaNombre}${horario}`,
@@ -99,20 +89,10 @@ export function useReservasRealtime(onReservaChange?: () => void) {
                 { duration: 6000 }
               );
             }
-
-            if (callbackRef.current) callbackRef.current();
           }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'reserva'
-          },
-          (payload) => {
-            if (!mounted) return;
-
+          
+          // Manejo de UPDATE
+          if (payload.eventType === 'UPDATE') {
             const reservaAnterior = payload.old as Record<string, unknown>;
             const reservaNueva = payload.new as Record<string, unknown>;
 
@@ -137,40 +117,27 @@ export function useReservasRealtime(onReservaChange?: () => void) {
                 });
               }
             }
-
-            if (callbackRef.current) callbackRef.current();
           }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'reserva'
-          },
-          (payload) => {
-            if (!mounted) return;
+
+          // Manejo de DELETE
+          if (payload.eventType === 'DELETE') {
             const reserva = payload.old as Record<string, unknown>;
-            notifications.info(`🗑️ Reserva #${reserva.id_reserva} eliminada`, {
+            notifications.warning(`🗑️ Reserva #${reserva.id_reserva} eliminada`, {
               duration: 4000
             });
-            if (callbackRef.current) callbackRef.current();
           }
-        )
-        .subscribe();
-    } catch {
-      // Silencioso en producción
-    }
+        }
+      )
+      .subscribe((status) => {
+        console.log(`📡 Estado de conexión Reservas: ${status}`);
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error en el canal de realtime Reservas');
+        }
+      });
 
     return () => {
-      mounted = false;
-      if (channel) {
-        try {
-          supabase.removeChannel(channel);
-        } catch {
-          // Silencioso
-        }
-      }
+      console.log('🔌 Desconectando Realtime Reservas...');
+      supabase.removeChannel(channel);
     };
-  }, []); // Sin dependencias para que el canal persista
+  }, []);
 }
