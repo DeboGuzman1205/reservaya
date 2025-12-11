@@ -64,8 +64,6 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
         throw new Error(errorData.error || 'Error al crear pago');
       }
 
-      // Notificación será mostrada por el listener realtime
-      // Recargar datos manualmente como fallback del realtime
       setTimeout(() => {
         loadPagos();
       }, 500);
@@ -95,8 +93,6 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
         throw new Error(errorData.error || 'Error al actualizar pago');
       }
 
-      // Notificación será mostrada por el listener realtime
-      // Recargar datos manualmente como fallback del realtime
       setTimeout(() => {
         loadPagos();
       }, 500);
@@ -110,77 +106,53 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
     }
   }, [loadPagos]);
 
-  // Configurar realtime
   useEffect(() => {
-    let mounted = true;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-
-    // Cargar datos iniciales
     loadPagos();
 
-    // Configurar suscripción realtime solo si está disponible
-    try {
-      channel = supabase
-        .channel('pagos-realtime')
-        .on(
-          'postgres_changes',
-          {
-            event: '*', // Escuchar todos los eventos
-            schema: 'public',
-            table: 'pago'
-          },
-          async (payload) => {
-            if (!mounted) return;
-
-            // Mostrar notificación según el evento
-            if (payload.eventType === 'INSERT') {
-              const nuevoPago = payload.new as Pago;
-              const monto = nuevoPago.monto ? `$${nuevoPago.monto.toLocaleString()}` : '';
-              notifications.success(`💰 Nuevo pago recibido ${monto}`, {
-                duration: 6000,
-                style: {
-                  background: '#059669',
-                  color: '#fff',
-                  fontWeight: 'bold'
-                }
-              });
-            } else if (payload.eventType === 'UPDATE') {
-              const pagoActualizado = payload.new as Pago;
-              const estadoEmoji = pagoActualizado.estado_pago === 'aprobado' ? '✅' : 
-                                 pagoActualizado.estado_pago === 'cancelado' ? '❌' : '⏳';
-              
-              if (pagoActualizado.estado_pago === 'aprobado') {
-                notifications.success(`${estadoEmoji} Pago aprobado - $${pagoActualizado.monto?.toLocaleString()}`, {
-                  duration: 5000
-                });
-              } else {
-                notifications.info(`${estadoEmoji} Pago ${pagoActualizado.estado_pago}`, {
-                  duration: 4000
-                });
+    const channel = supabase
+      .channel('pagos-realtime-v2')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pago'
+        },
+        async (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const nuevoPago = payload.new as Pago;
+            const monto = nuevoPago.monto ? `$${nuevoPago.monto.toLocaleString()}` : '';
+            notifications.success(`💰 Nuevo pago recibido ${monto}`, {
+              duration: 6000,
+              style: {
+                background: '#059669',
+                color: '#fff',
+                fontWeight: 'bold'
               }
-            }
-
-            // Recargar datos cuando hay cambios
-            try {
-              await loadPagos();
-            } catch {
-              // Silencioso en producción
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const pagoActualizado = payload.new as Pago;
+            const estadoEmoji = pagoActualizado.estado_pago === 'aprobado' ? '✅' : 
+                               pagoActualizado.estado_pago === 'cancelado' ? '❌' : '⏳';
+            
+            if (pagoActualizado.estado_pago === 'aprobado') {
+              notifications.success(`${estadoEmoji} Pago aprobado - $${pagoActualizado.monto?.toLocaleString()}`, {
+                duration: 5000
+              });
+            } else {
+              notifications.info(`${estadoEmoji} Pago ${pagoActualizado.estado_pago}`, {
+                duration: 4000
+              });
             }
           }
-        )
-        .subscribe();
-    } catch {
-    }
 
-    // Cleanup
-    return () => {
-      mounted = false;
-      if (channel) {
-        try {
-          supabase.removeChannel(channel);
-        } catch {
+          await loadPagos();
         }
-      }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
   }, [loadPagos]);
 
