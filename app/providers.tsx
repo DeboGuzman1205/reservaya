@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { SessionContextProvider } from '@supabase/auth-helpers-react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { Toaster } from 'react-hot-toast';
+import { toasterConfig } from '@/lib/notifications';
 
 // Extender Window para incluir supabase
 declare global {
@@ -27,6 +29,7 @@ export default function SupabaseProvider({ children }: { children: React.ReactNo
       supabaseClient={supabaseClient}
       initialSession={null}
     >
+      <Toaster {...toasterConfig} />
       {children}
     </SessionContextProvider>
   );
