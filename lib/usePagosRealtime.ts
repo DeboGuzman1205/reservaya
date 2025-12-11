@@ -78,7 +78,7 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
       }
       throw err;
     }
-  }, []);
+  }, [loadPagos]);
 
   // Función para actualizar pago
   const actualizarPago = useCallback(async (id_pago: number, data: { estado_pago: string; mp_id?: string }) => {
@@ -125,7 +125,7 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
       }
       throw err;
     }
-  }, []);
+  }, [loadPagos]);
 
   // Configurar realtime
   useEffect(() => {

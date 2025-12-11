@@ -33,7 +33,8 @@ export const AutoCancelProvider = ({ children }: AutoCancelProviderProps) => {
             }, 1000);
           }
         }
-      } catch (error) {
+      } catch {
+        // Ignorar errores silenciosamente
       }
     };
 

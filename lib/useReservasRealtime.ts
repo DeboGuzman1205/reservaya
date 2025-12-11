@@ -29,7 +29,6 @@ export function useReservasRealtime(onReservaChange?: () => void) {
 
             const reserva = payload.new as Record<string, unknown>;
             const estado = reserva.estado_reserva as string;
-            const idReserva = reserva.id_reserva;
             const horario = reserva.hora_inicio && reserva.hora_fin
               ? ` (${reserva.hora_inicio} - ${reserva.hora_fin})`
               : '';
@@ -45,7 +44,7 @@ export function useReservasRealtime(onReservaChange?: () => void) {
               const idCancha = reserva.id_cancha;
 
               if (idCliente && idCancha) {
-                const [clienteRes, canchaRes] = await Promise.race([
+                const results = await Promise.race([
                   Promise.all([
                     supabase
                       .from('cliente')
@@ -62,7 +61,12 @@ export function useReservasRealtime(onReservaChange?: () => void) {
                   new Promise((_, reject) => 
                     setTimeout(() => reject(new Error('Timeout')), 2000)
                   )
-                ]) as [any, any];
+                ]) as [
+                  { data: { nombre: string; apellido: string } | null },
+                  { data: { nombre: string } | null }
+                ];
+                
+                const [clienteRes, canchaRes] = results;
 
                 if (clienteRes?.data) {
                   clienteNombre = `${clienteRes.data.nombre} ${clienteRes.data.apellido}`.trim();

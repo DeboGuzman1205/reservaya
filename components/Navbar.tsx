@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { BellIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';

@@ -697,7 +697,7 @@ export async function obtenerEstadisticasDashboard() {
     
     if (errorPendientes) {
           }
-    const { data: reservasHoy, error: errorIngresos } = await supabase
+    const { error: errorIngresos } = await supabase
       .from('reserva')
       .select('id_reserva, costo_reserva, estado_reserva, fecha_reserva')
       .eq('fecha_reserva', fechaHoy)
