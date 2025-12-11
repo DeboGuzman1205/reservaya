@@ -82,8 +82,7 @@ export async function GET(request: NextRequest) {
       chat_id: cliente.chat_id
     });
 
-  } catch (error) {
-    console.error('Error interno del servidor:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

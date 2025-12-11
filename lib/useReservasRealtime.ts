@@ -128,15 +128,9 @@ export function useReservasRealtime() {
           }
         }
       )
-      .subscribe((status) => {
-        console.log(`📡 Estado de conexión Reservas: ${status}`);
-        if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error en el canal de realtime Reservas');
-        }
-      });
+      .subscribe();
 
     return () => {
-      console.log('🔌 Desconectando Realtime Reservas...');
       supabase.removeChannel(channel);
     };
   }, []);

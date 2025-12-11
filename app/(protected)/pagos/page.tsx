@@ -41,7 +41,6 @@ export default function PagosPage() {
       
       // Validar que la fecha es válida
       if (isNaN(fecha.getTime())) {
-        console.warn('Fecha inválida en convertirFechaABuenosAires:', fechaTimestamptz);
         return 'Fecha inválida';
       }
       
@@ -56,8 +55,7 @@ export default function PagosPage() {
       };
       
       return new Intl.DateTimeFormat('es-AR', opciones).format(fecha);
-    } catch (error) {
-      console.error('Error al formatear fecha timestamptz:', fechaTimestamptz, error);
+    } catch {
       return 'Error de formato';
     }
   };
@@ -71,7 +69,6 @@ export default function PagosPage() {
       
       // Validar que la fecha es válida
       if (isNaN(fecha.getTime())) {
-        console.warn('Fecha inválida:', fechaTimestamptz);
         return '';
       }
       
@@ -84,8 +81,7 @@ export default function PagosPage() {
       } as const;
       
       return new Intl.DateTimeFormat('sv-SE', opciones).format(fecha);
-    } catch (error) {
-      console.error('Error al formatear fecha timestamptz:', fechaTimestamptz, error);
+    } catch {
       return '';
     }
   };

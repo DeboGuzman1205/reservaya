@@ -64,8 +64,7 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
         throw new Error(errorData.error || 'Error al crear pago');
       }
 
-      notifications.success(`Pago de $${nuevoPago.monto.toLocaleString()} creado exitosamente`);
-      
+      // Notificación será mostrada por el listener realtime
       // Recargar datos manualmente como fallback del realtime
       setTimeout(() => {
         loadPagos();
@@ -96,23 +95,7 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
         throw new Error(errorData.error || 'Error al actualizar pago');
       }
 
-      // Mostrar notificación específica según el estado
-      if (data.estado_pago === 'aprobado') {
-        notifications.success(`🎉 ¡Pago aprobado exitosamente!`, {
-          duration: 5000,
-          icon: '✅'
-        });
-      } else if (data.estado_pago === 'cancelado') {
-        notifications.error(`Pago marcado como cancelado`, {
-          duration: 4000,
-          icon: '❌'
-        });
-      } else {
-        notifications.info(`Estado del pago actualizado a: ${data.estado_pago}`, {
-          duration: 3000
-        });
-      }
-      
+      // Notificación será mostrada por el listener realtime
       // Recargar datos manualmente como fallback del realtime
       setTimeout(() => {
         loadPagos();

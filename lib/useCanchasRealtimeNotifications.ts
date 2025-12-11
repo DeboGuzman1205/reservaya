@@ -71,15 +71,9 @@ export function useCanchasRealtimeNotifications() {
           }
         }
       )
-      .subscribe((status) => {
-        console.log(`📡 Estado de conexión Canchas: ${status}`);
-        if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error en el canal de realtime Canchas');
-        }
-      });
+      .subscribe();
 
     return () => {
-      console.log('🔌 Desconectando Realtime Canchas...');
       supabase.removeChannel(channel);
     };
   }, []);

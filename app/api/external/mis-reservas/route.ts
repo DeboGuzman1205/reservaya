@@ -45,22 +45,14 @@ export async function GET(request: NextRequest) {
 
     // Obtener fecha actual en zona horaria de Argentina (UTC-3)
     const ahora = new Date();
-    const fechaArgentina = new Date(ahora.getTime() - (3 * 60 * 60 * 1000)); // Restar 3 horas para Argentina
+    const fechaArgentina = new Date(ahora.getTime() - (3 * 60 * 60 * 1000));
     const fechaActual = fechaArgentina.toISOString().split('T')[0];
-    
-    console.log(`Hora UTC: ${ahora.toISOString()}`);
-    console.log(`Fecha Argentina: ${fechaActual}, mostrar todas: ${todasLasReservas}`);
-
-    // Buscar al cliente por chat_id usando los campos reales de la tabla cliente
-    console.log(`Buscando cliente con chat_id: ${chatId}`);
     
     const { data: cliente, error: clienteError } = await supabase
       .from('cliente')
       .select('id_cliente, nombre, apellido, telefono, chat_id')
       .eq('chat_id', chatId)
       .single();
-      
-    console.log('Cliente encontrado:', cliente);
 
     if (clienteError) {
       if (clienteError.code === 'PGRST116') {
@@ -75,9 +67,6 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Buscar reservas del cliente (confirmadas y pendientes)
-    console.log(`Buscando reservas para cliente ID: ${cliente.id_cliente}, desde fecha: ${fechaActual}`);
-    
     let query = supabase
       .from('reserva')
       .select('id_reserva, id_cancha, fecha_reserva, hora_inicio, hora_fin, estado_reserva, costo_reserva, created_at')
@@ -92,8 +81,6 @@ export async function GET(request: NextRequest) {
     const { data: reservas, error: reservasError } = await query
       .order('fecha_reserva', { ascending: true })
       .order('hora_inicio', { ascending: true });
-      
-    console.log(`Reservas encontradas: ${reservas?.length || 0}`, reservas);
 
     if (reservasError) {
       return NextResponse.json<ApiResponse>({

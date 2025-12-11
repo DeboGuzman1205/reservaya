@@ -714,7 +714,7 @@ export async function obtenerEstadisticasDashboard() {
       .eq('estado_pago', 'aprobado');
     
     if (errorPagos) {
-      console.error('Error al obtener pagos diarios:', errorPagos);
+      // Error silencioso
     }
     
     const ingresosDiarios = pagosHoy?.filter(pago => {
@@ -759,7 +759,7 @@ export async function obtenerEstadisticasDashboard() {
       .eq('estado_pago', 'aprobado');
     
     if (errorPagosMensuales) {
-      console.error('Error al obtener pagos mensuales:', errorPagosMensuales);
+      // Error silencioso
     }
     
     const ingresosMensuales = pagosMensuales?.filter(pago => {
