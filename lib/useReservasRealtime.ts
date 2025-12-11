@@ -4,19 +4,16 @@ import notifications from './notifications';
 
 export function useReservasRealtime() {
   useEffect(() => {
-    console.log('🔌 Intentando conectar a Realtime Reservas...');
-
     const channel = supabase
-      .channel('reservas-tracker-v2') // Nombre único para evitar conflictos
+      .channel('reservas-tracker-v2')
       .on(
         'postgres_changes',
         {
-          event: '*', // Escuchar todo (INSERT, UPDATE, DELETE)
+          event: '*',
           schema: 'public',
           table: 'reserva',
         },
         async (payload) => {
-          console.log('📨 Evento recibido en Reservas:', payload); // DEBUG
 
           // Manejo de INSERT
           if (payload.eventType === 'INSERT') {

@@ -22,7 +22,6 @@ async function obtenerDisponibilidadCanchas(fecha: string, canchaId?: number, ti
   const supabase = getSupabaseClient();
   
   try {
-    // Query para canchas disponibles
     let canchasQuery = supabase
       .from('cancha')
       .select('id_cancha, nombre, tipo, disponibilidad_horaria, estado_cancha, tarifa_hora')
@@ -46,7 +45,6 @@ async function obtenerDisponibilidadCanchas(fecha: string, canchaId?: number, ti
   	  return [];
   	}
 
-  	// Para cada cancha, obtener reservas del día
   	const disponibilidadPromises = canchas.map(async (cancha: {
   	  id_cancha: number;
   	  nombre: string;
@@ -66,7 +64,6 @@ async function obtenerDisponibilidadCanchas(fecha: string, canchaId?: number, ti
   	 	 throw new Error(`Error al consultar reservas para cancha ${cancha.id_cancha}`);
   	  }
 
-  	  // Obtener nombres de clientes
   	  const clienteIds = [...new Set((reservas || []).map((r: { id_cliente: number }) => r.id_cliente).filter(Boolean))];
   	  let clientesMap = new Map<number, string>();
   	  
@@ -81,21 +78,20 @@ async function obtenerDisponibilidadCanchas(fecha: string, canchaId?: number, ti
   	 	 );
   	  }
 
-  	  // Generar horarios base (08:00-23:00 + 00:00)
   	  let horariosCompletos: string[] = [];
   	  for (let hora = 8; hora <= 23; hora++) {
   	 	 horariosCompletos.push(`${hora.toString().padStart(2, '0')}:00`);
   	  }
   	  horariosCompletos.push('00:00');
   	  
-  	  // Filtrar horarios pasados si es hoy
   	  const ahora = new Date();
+  	  const ahoraArgentina = new Date(ahora.getTime() - (3 * 60 * 60 * 1000));
   	  const [year, month, day] = fecha.split('-').map(Number);
   	  const fechaConsulta = new Date(year, month - 1, day);
-  	  const esHoy = fechaConsulta.toDateString() === ahora.toDateString();
+  	  const esHoy = fechaConsulta.toDateString() === ahoraArgentina.toDateString();
   	  
   	  if (esHoy) {
-  	 	 const proximaHora = ahora.getHours() + 1;
+  	 	 const proximaHora = ahoraArgentina.getHours() + 1;
   	 	 horariosCompletos = horariosCompletos.filter(horario => {
   	 	 	 const [hora] = horario.split(':').map(Number);
   	 	 	 const horaSlot = (hora === 0) ? 24 : hora;
@@ -103,7 +99,6 @@ async function obtenerDisponibilidadCanchas(fecha: string, canchaId?: number, ti
   	 	 });
   	  }
 
-  	  // Mapear reservas con nombres de clientes
   	  const horariosOcupados = (reservas || []).map((reserva: {
   	 	 hora_inicio: string;
   	 	 hora_fin: string;
@@ -114,7 +109,6 @@ async function obtenerDisponibilidadCanchas(fecha: string, canchaId?: number, ti
   	 	 cliente: clientesMap.get(reserva.id_cliente) || 'Cliente no identificado'
   	  }));
   	  
-  	  // Filtrar horarios disponibles
   	  const horariosDisponibles = horariosCompletos.filter(horario => {
   	 	 const horaSlot = parseInt(horario.split(':')[0]);
   	 	 
@@ -125,23 +119,20 @@ async function obtenerDisponibilidadCanchas(fecha: string, canchaId?: number, ti
   	 	 	 const horaInicioReserva = parseInt(reserva.hora_inicio.split(':')[0]);
   	 	 	 let horaFinReserva = parseInt(reserva.hora_fin.split(':')[0]);
 
-          // Manejar medianoche como hora 24
           if (horaFinReserva === 0) {
             horaFinReserva = 24;
           }
   	 	 	 
-  	 	 	 // Verificar si el slot está dentro del rango de reserva
   	 	 	 return horaSlot >= horaInicioReserva && horaSlot < horaFinReserva;
   	 	 });
   	 	 
   	 	 return !estaOcupado;
   	  });
 
-  	  // Si se especifica una hora específica, verificar disponibilidad
   	  if (horaInicio) {
   	 	 const horaDisponible = horariosDisponibles.includes(horaInicio);
   	 	 if (!horaDisponible) {
-  	 	 	 return null; // Esta cancha no tiene la hora solicitada disponible
+  	 	 	 return null;
   	 	 }
   	 	 return {
   	 	 	 id_cancha: cancha.id_cancha,
@@ -166,7 +157,6 @@ async function obtenerDisponibilidadCanchas(fecha: string, canchaId?: number, ti
   	});
 
   	const disponibilidad = await Promise.all(disponibilidadPromises);
-  	// Filtrar canchas sin la hora solicitada
   	return disponibilidad.filter((cancha): cancha is DisponibilidadCanchaResponse => cancha !== null);
 
   } catch (error) {

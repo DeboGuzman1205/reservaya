@@ -4,19 +4,16 @@ import notifications from './notifications';
 
 export function useCanchasRealtimeNotifications() {
   useEffect(() => {
-    console.log('🔌 Intentando conectar a Realtime Canchas...');
-
     const channel = supabase
-      .channel('canchas-tracker-v2') // Nombre único para evitar conflictos
+      .channel('canchas-tracker-v2')
       .on(
         'postgres_changes',
         {
-          event: '*', // Escuchar todo (INSERT, UPDATE, DELETE)
+          event: '*',
           schema: 'public',
           table: 'cancha',
         },
         (payload) => {
-          console.log('📨 Evento recibido en Canchas:', payload); // DEBUG
 
           // Manejo de INSERT
           if (payload.eventType === 'INSERT') {
