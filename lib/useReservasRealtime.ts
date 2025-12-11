@@ -31,61 +31,75 @@ export function useReservasRealtime(onReservaChange?: () => void) {
             if (payload.eventType === 'INSERT') {
               const reserva = payload.new as Record<string, unknown>;
               const estado = reserva.estado_reserva as string;
+              const idCliente = reserva.id_cliente;
+              const idCancha = reserva.id_cancha;
               
               // Obtener datos del cliente y cancha
+              let clienteNombre = `Cliente #${idCliente}`;
+              let canchaNombre = `Cancha #${idCancha}`;
+              
               try {
-                const [clienteRes, canchaRes] = await Promise.all([
-                  supabase
-                    .from('cliente')
-                    .select('nombre, apellido')
-                    .eq('id_cliente', reserva.id_cliente)
-                    .single(),
-                  supabase
-                    .from('cancha')
-                    .select('nombre')
-                    .eq('id_cancha', reserva.id_cancha)
-                    .single()
-                ]);
+                // Verificar que tengamos los IDs necesarios
+                if (idCliente && idCancha) {
+                  const [clienteRes, canchaRes] = await Promise.all([
+                    supabase
+                      .from('cliente')
+                      .select('nombre, apellido')
+                      .eq('id_cliente', idCliente)
+                      .maybeSingle(),
+                    supabase
+                      .from('cancha')
+                      .select('nombre')
+                      .eq('id_cancha', idCancha)
+                      .maybeSingle()
+                  ]);
 
-                const clienteNombre = clienteRes.data
-                  ? `${clienteRes.data.nombre} ${clienteRes.data.apellido}`
-                  : 'Cliente desconocido';
-                const canchaNombre = canchaRes.data?.nombre || 'Cancha desconocida';
+                  if (clienteRes.data) {
+                    clienteNombre = `${clienteRes.data.nombre} ${clienteRes.data.apellido}`.trim();
+                  }
+                  
+                  if (canchaRes.data) {
+                    canchaNombre = canchaRes.data.nombre;
+                  }
+                }
+                
                 const horario = reserva.hora_inicio && reserva.hora_fin
-                  ? `${reserva.hora_inicio} - ${reserva.hora_fin}`
+                  ? ` (${reserva.hora_inicio} - ${reserva.hora_fin})`
                   : '';
 
                 // Mostrar notificación según el estado de la reserva
                 if (estado === 'pendiente') {
                   notifications.warning(
-                    `⏳ Reserva pendiente: ${clienteNombre} - ${canchaNombre}${horario ? ` (${horario})` : ''}`,
+                    `⏳ Reserva pendiente: ${clienteNombre} - ${canchaNombre}${horario}`,
                     {
-                      duration: 6000,
-                      icon: '⏰'
+                      duration: 6000
                     }
                   );
                 } else if (estado === 'confirmada') {
                   notifications.success(
-                    `✅ Reserva confirmada: ${clienteNombre} - ${canchaNombre}${horario ? ` (${horario})` : ''}`,
+                    `✅ Reserva confirmada: ${clienteNombre} - ${canchaNombre}${horario}`,
                     {
-                      duration: 6000,
-                      icon: '🎉'
+                      duration: 6000
                     }
                   );
                 } else {
                   notifications.success(
-                    `📅 Nueva reserva: ${clienteNombre} - ${canchaNombre}${horario ? ` (${horario})` : ''}`,
+                    `📅 Nueva reserva: ${clienteNombre} - ${canchaNombre}${horario}`,
                     {
-                      duration: 6000,
-                      icon: '🎉'
+                      duration: 6000
                     }
                   );
                 }
               } catch {
+                // Si falla la consulta, mostrar con los IDs
+                const horario = reserva.hora_inicio && reserva.hora_fin
+                  ? ` (${reserva.hora_inicio} - ${reserva.hora_fin})`
+                  : '';
+                  
                 if (estado === 'pendiente') {
-                  notifications.warning('⏳ Nueva reserva pendiente de pago');
+                  notifications.warning(`⏳ Reserva pendiente: ${clienteNombre} - ${canchaNombre}${horario}`);
                 } else {
-                  notifications.success('📅 Nueva reserva creada');
+                  notifications.success(`📅 Nueva reserva: ${clienteNombre} - ${canchaNombre}${horario}`);
                 }
               }
             } else if (payload.eventType === 'UPDATE') {
@@ -102,13 +116,11 @@ export function useReservasRealtime(onReservaChange?: () => void) {
                   });
                 } else if (estado === 'confirmada') {
                   notifications.success(`✅ Reserva #${reservaNueva.id_reserva} confirmada`, {
-                    duration: 5000,
-                    icon: '🎯'
+                    duration: 5000
                   });
                 } else if (estado === 'pendiente') {
                   notifications.warning(`⏳ Reserva #${reservaNueva.id_reserva} pendiente de pago`, {
-                    duration: 5000,
-                    icon: '⏰'
+                    duration: 5000
                   });
                 } else {
                   notifications.info(`📝 Reserva #${reservaNueva.id_reserva}: ${estado}`, {

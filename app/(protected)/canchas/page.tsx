@@ -6,7 +6,6 @@ import { PlusIcon } from '@heroicons/react/24/outline';
 import CanchaForm from '@/components/canchas/CanchaForm';
 import CanchasList from '@/components/canchas/CanchasList';
 import { useRouter } from 'next/navigation';
-import { useCanchasRealtimeNotifications } from '@/lib/useCanchasRealtimeNotifications';
 import notifications from '@/lib/notifications';
 
 // Importar las acciones del servidor
@@ -36,14 +35,15 @@ export default function CanchasPage() {
         }
     }, []);
 
-    // Hook de Realtime con notificaciones
-    useCanchasRealtimeNotifications(() => {
-        cargarCanchas();
-    });
-
-    // Efecto para cargar canchas al montar el componente
+    // Cargar datos al inicio y periódicamente
     useEffect(() => {
         cargarCanchas();
+        
+        const interval = setInterval(() => {
+            cargarCanchas();
+        }, 30000);
+        
+        return () => clearInterval(interval);
     }, [cargarCanchas]);
 
     // Manejar creación de cancha

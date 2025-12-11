@@ -32,9 +32,8 @@ export function useCanchasRealtimeNotifications(onCanchaChange?: () => void) {
               const cancha = payload.new as Record<string, unknown>;
               const nombreCancha = cancha.nombre || `Cancha #${cancha.id_cancha}`;
               const tipo = cancha.tipo ? ` (${cancha.tipo})` : '';
-              notifications.success(`⚽ Nueva cancha: ${nombreCancha}${tipo}`, {
-                duration: 5000,
-                icon: '🏟️'
+              notifications.success(`🏟️ Nueva cancha: ${nombreCancha}${tipo}`, {
+                duration: 5000
               });
             } else if (payload.eventType === 'UPDATE') {
               const canchaAnterior = payload.old as Record<string, unknown>;
@@ -47,8 +46,7 @@ export function useCanchasRealtimeNotifications(onCanchaChange?: () => void) {
                 
                 if (estado === 'disponible') {
                   notifications.success(`✅ ${nombreCancha} ahora está disponible`, {
-                    duration: 5000,
-                    icon: '🟢'
+                    duration: 5000
                   });
                 } else if (estado === 'mantenimiento') {
                   notifications.warning(`🔧 ${nombreCancha} en mantenimiento`, {

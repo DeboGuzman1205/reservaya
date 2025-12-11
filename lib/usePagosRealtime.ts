@@ -155,7 +155,6 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
               const monto = nuevoPago.monto ? `$${nuevoPago.monto.toLocaleString()}` : '';
               notifications.success(`💰 Nuevo pago recibido ${monto}`, {
                 duration: 6000,
-                icon: '💳',
                 style: {
                   background: '#059669',
                   color: '#fff',
@@ -169,8 +168,7 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
               
               if (pagoActualizado.estado_pago === 'aprobado') {
                 notifications.success(`${estadoEmoji} Pago aprobado - $${pagoActualizado.monto?.toLocaleString()}`, {
-                  duration: 5000,
-                  icon: '🎉'
+                  duration: 5000
                 });
               } else {
                 notifications.info(`${estadoEmoji} Pago ${pagoActualizado.estado_pago}`, {

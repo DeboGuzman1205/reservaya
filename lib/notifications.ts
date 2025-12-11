@@ -1,19 +1,25 @@
-﻿import { toast } from 'sonner';
+﻿import toast from 'react-hot-toast';
 
 // Tipos para las notificaciones
 export type NotificationType = 'success' | 'error' | 'loading' | 'info' | 'warning';
 
 export interface NotificationOptions {
   duration?: number;
-  position?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
   icon?: string;
-  style?: Record<string, unknown>;
+  style?: React.CSSProperties;
+  className?: string;
 }
 
 // Configuración por defecto para las notificaciones
-const defaultOptions: NotificationOptions = {
+const defaultOptions = {
   duration: 4000,
-  position: 'top-right',
+  style: {
+    borderRadius: '10px',
+    background: '#333',
+    color: '#fff',
+    padding: '16px',
+    fontSize: '14px',
+  },
 };
 
 // Verificar si estamos en el navegador
@@ -22,7 +28,7 @@ const isBrowser = typeof window !== 'undefined';
 // Clase para manejar las notificaciones del sistema
 class NotificationManager {
   private static instance: NotificationManager;
-  private connectionToastId: string | number | null = null;
+  private connectionToastId: string | null = null;
   private connectionDebounceTimeout: NodeJS.Timeout | null = null;
   private lastConnectionState: boolean | null = null;
 
@@ -375,30 +381,39 @@ export const realtimeNotifications = {
   },
 };
 
-// Configuración del Toaster para usar en el layout
+// Configuración del Toaster para react-hot-toast
 export const toasterConfig = {
   position: 'top-right' as const,
   reverseOrder: false,
   gutter: 8,
-  containerClassName: '',
-  containerStyle: {},
+  containerStyle: {
+    top: 20,
+    right: 20,
+  },
   toastOptions: {
-    // Configuración global
     duration: 4000,
     style: {
       background: '#363636',
       color: '#fff',
       fontSize: '14px',
-      borderRadius: '8px',
-      padding: '12px 16px',
-      boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+      borderRadius: '10px',
+      padding: '16px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+      maxWidth: '500px',
     },
-    // Configuración por tipo
     success: {
       duration: 4000,
+      iconTheme: {
+        primary: '#10b981',
+        secondary: '#fff',
+      },
     },
     error: {
       duration: 5000,
+      iconTheme: {
+        primary: '#ef4444',
+        secondary: '#fff',
+      },
     },
   },
 };

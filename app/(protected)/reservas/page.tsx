@@ -5,8 +5,6 @@ import { Reserva, Cliente, Cancha } from '@/types';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import ReservaForm from '@/components/reservas/ReservaForm';
 import ReservasList from '@/components/reservas/ReservasList';
-import { useReservasRealtime } from '@/lib/useReservasRealtime';
-import { useCanchasRealtimeNotifications } from '@/lib/useCanchasRealtimeNotifications';
 import { useRouter } from 'next/navigation';
 import notifications from '@/lib/notifications';
 
@@ -101,18 +99,16 @@ export default function ReservasPage() {
       }
   }, []);
 
-  // Hooks de Realtime con notificaciones
-  useReservasRealtime(() => {
-    cargarDatos();
-  });
-  
-  useCanchasRealtimeNotifications(() => {
-    cargarDatos();
-  });
-
-  // Efecto para cargar datos al inicio
+  // Cargar datos al inicio y periódicamente
   useEffect(() => {
     cargarDatos();
+    
+    // Recargar datos cada 30 segundos como fallback
+    const interval = setInterval(() => {
+      cargarDatos();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [cargarDatos]);
 
   const handleSubmitReserva = async (reserva: Omit<Reserva, 'id_reserva'>) => {

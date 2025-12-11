@@ -6,7 +6,6 @@ import { PlusIcon } from '@heroicons/react/24/outline';
 import ClienteForm from '@/components/clientes/ClienteForm';
 import ClientesList from '@/components/clientes/ClientesList';
 import { useRouter } from 'next/navigation';
-import { useClientesRealtime } from '@/lib/useClientesRealtime';
 import notifications from '@/lib/notifications';
 
 // Importar las acciones del servidor
@@ -36,12 +35,15 @@ export default function ClientesPage() {
         }
     }, []);
 
-    // Hook de Realtime con notificaciones
-    useClientesRealtime(() => {
-        cargarClientes();
-    });    // Efecto para cargar clientes al montar el componente
+    // Cargar datos al inicio y periódicamente
     useEffect(() => {
         cargarClientes();
+        
+        const interval = setInterval(() => {
+            cargarClientes();
+        }, 30000);
+        
+        return () => clearInterval(interval);
     }, [cargarClientes]);
 
     // Manejar creación de cliente

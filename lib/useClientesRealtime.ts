@@ -32,8 +32,7 @@ export function useClientesRealtime(onClienteChange?: () => void) {
               const cliente = payload.new as Record<string, unknown>;
               const nombreCompleto = `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
               notifications.success(`👤 Nuevo cliente: ${nombreCompleto || 'Cliente sin nombre'}`, {
-                duration: 5000,
-                icon: '✨'
+                duration: 5000
               });
             } else if (payload.eventType === 'UPDATE') {
               const cliente = payload.new as Record<string, unknown>;
