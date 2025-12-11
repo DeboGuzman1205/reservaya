@@ -389,6 +389,7 @@ export const toasterConfig = {
   containerStyle: {
     top: 20,
     right: 20,
+    zIndex: 99999, // Asegurar que esté por encima de todo
   },
   toastOptions: {
     duration: 4000,

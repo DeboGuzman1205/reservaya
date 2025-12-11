@@ -16,32 +16,37 @@ export function useReservasRealtime(onReservaChange?: () => void) {
 
     try {
       channel = supabase
-        .channel('reservas-notifications-realtime')
+        .channel('reservas-global-listener')
         .on(
           'postgres_changes',
           {
-            event: '*',
+            event: 'INSERT',
             schema: 'public',
             table: 'reserva'
           },
           async (payload) => {
             if (!mounted) return;
 
-            // Notificaciones según el tipo de evento
-            if (payload.eventType === 'INSERT') {
-              const reserva = payload.new as Record<string, unknown>;
-              const estado = reserva.estado_reserva as string;
+            const reserva = payload.new as Record<string, unknown>;
+            const estado = reserva.estado_reserva as string;
+            const idReserva = reserva.id_reserva;
+            const horario = reserva.hora_inicio && reserva.hora_fin
+              ? ` (${reserva.hora_inicio} - ${reserva.hora_fin})`
+              : '';
+
+            // PASO 1: Notificación optimista INMEDIATA (sin esperar consultas)
+            // Esto garantiza que siempre se vea algo, incluso si las consultas fallan
+            let clienteNombre = 'Cliente';
+            let canchaNombre = 'Cancha';
+
+            try {
+              // PASO 2: Intentar obtener datos adicionales (puede fallar en producción)
               const idCliente = reserva.id_cliente;
               const idCancha = reserva.id_cancha;
-              
-              // Obtener datos del cliente y cancha
-              let clienteNombre = `Cliente #${idCliente}`;
-              let canchaNombre = `Cancha #${idCancha}`;
-              
-              try {
-                // Verificar que tengamos los IDs necesarios
-                if (idCliente && idCancha) {
-                  const [clienteRes, canchaRes] = await Promise.all([
+
+              if (idCliente && idCancha) {
+                const [clienteRes, canchaRes] = await Promise.race([
+                  Promise.all([
                     supabase
                       .from('cliente')
                       .select('nombre, apellido')
@@ -52,93 +57,100 @@ export function useReservasRealtime(onReservaChange?: () => void) {
                       .select('nombre')
                       .eq('id_cancha', idCancha)
                       .maybeSingle()
-                  ]);
+                  ]),
+                  // Timeout de 2 segundos
+                  new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Timeout')), 2000)
+                  )
+                ]) as [any, any];
 
-                  if (clienteRes.data) {
-                    clienteNombre = `${clienteRes.data.nombre} ${clienteRes.data.apellido}`.trim();
-                  }
-                  
-                  if (canchaRes.data) {
-                    canchaNombre = canchaRes.data.nombre;
-                  }
+                if (clienteRes?.data) {
+                  clienteNombre = `${clienteRes.data.nombre} ${clienteRes.data.apellido}`.trim();
                 }
                 
-                const horario = reserva.hora_inicio && reserva.hora_fin
-                  ? ` (${reserva.hora_inicio} - ${reserva.hora_fin})`
-                  : '';
-
-                // Mostrar notificación según el estado de la reserva
-                if (estado === 'pendiente') {
-                  notifications.warning(
-                    `⏳ Reserva pendiente: ${clienteNombre} - ${canchaNombre}${horario}`,
-                    {
-                      duration: 6000
-                    }
-                  );
-                } else if (estado === 'confirmada') {
-                  notifications.success(
-                    `✅ Reserva confirmada: ${clienteNombre} - ${canchaNombre}${horario}`,
-                    {
-                      duration: 6000
-                    }
-                  );
-                } else {
-                  notifications.success(
-                    `📅 Nueva reserva: ${clienteNombre} - ${canchaNombre}${horario}`,
-                    {
-                      duration: 6000
-                    }
-                  );
-                }
-              } catch {
-                // Si falla la consulta, mostrar con los IDs
-                const horario = reserva.hora_inicio && reserva.hora_fin
-                  ? ` (${reserva.hora_inicio} - ${reserva.hora_fin})`
-                  : '';
-                  
-                if (estado === 'pendiente') {
-                  notifications.warning(`⏳ Reserva pendiente: ${clienteNombre} - ${canchaNombre}${horario}`);
-                } else {
-                  notifications.success(`📅 Nueva reserva: ${clienteNombre} - ${canchaNombre}${horario}`);
+                if (canchaRes?.data) {
+                  canchaNombre = canchaRes.data.nombre;
                 }
               }
-            } else if (payload.eventType === 'UPDATE') {
-              const reservaAnterior = payload.old as Record<string, unknown>;
-              const reservaNueva = payload.new as Record<string, unknown>;
+            } catch {
+              // Si falla, usar valores por defecto (ya están asignados)
+              clienteNombre = `Cliente #${reserva.id_cliente}`;
+              canchaNombre = `Cancha #${reserva.id_cancha}`;
+            }
 
-              // Solo notificar si cambió el estado
-              if (reservaAnterior.estado_reserva !== reservaNueva.estado_reserva) {
-                const estado = reservaNueva.estado_reserva as string;
-                
-                if (estado === 'cancelada') {
-                  notifications.warning(`❌ Reserva #${reservaNueva.id_reserva} cancelada`, {
-                    duration: 5000
-                  });
-                } else if (estado === 'confirmada') {
-                  notifications.success(`✅ Reserva #${reservaNueva.id_reserva} confirmada`, {
-                    duration: 5000
-                  });
-                } else if (estado === 'pendiente') {
-                  notifications.warning(`⏳ Reserva #${reservaNueva.id_reserva} pendiente de pago`, {
-                    duration: 5000
-                  });
-                } else {
-                  notifications.info(`📝 Reserva #${reservaNueva.id_reserva}: ${estado}`, {
-                    duration: 4000
-                  });
-                }
+            // PASO 3: Mostrar notificación con los datos disponibles
+            if (estado === 'pendiente') {
+              notifications.warning(
+                `⏳ Reserva pendiente: ${clienteNombre} - ${canchaNombre}${horario}`,
+                { duration: 6000 }
+              );
+            } else if (estado === 'confirmada') {
+              notifications.success(
+                `✅ Reserva confirmada: ${clienteNombre} - ${canchaNombre}${horario}`,
+                { duration: 6000 }
+              );
+            } else {
+              notifications.success(
+                `📅 Nueva reserva: ${clienteNombre} - ${canchaNombre}${horario}`,
+                { duration: 6000 }
+              );
+            }
+
+            if (callbackRef.current) callbackRef.current();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'reserva'
+          },
+          (payload) => {
+            if (!mounted) return;
+
+            const reservaAnterior = payload.old as Record<string, unknown>;
+            const reservaNueva = payload.new as Record<string, unknown>;
+
+            if (reservaAnterior.estado_reserva !== reservaNueva.estado_reserva) {
+              const estado = reservaNueva.estado_reserva as string;
+              
+              if (estado === 'cancelada') {
+                notifications.warning(`❌ Reserva #${reservaNueva.id_reserva} cancelada`, {
+                  duration: 5000
+                });
+              } else if (estado === 'confirmada') {
+                notifications.success(`✅ Reserva #${reservaNueva.id_reserva} confirmada`, {
+                  duration: 5000
+                });
+              } else if (estado === 'pendiente') {
+                notifications.warning(`⏳ Reserva #${reservaNueva.id_reserva} pendiente de pago`, {
+                  duration: 5000
+                });
+              } else {
+                notifications.info(`📝 Reserva #${reservaNueva.id_reserva}: ${estado}`, {
+                  duration: 4000
+                });
               }
-            } else if (payload.eventType === 'DELETE') {
-              const reserva = payload.old as Record<string, unknown>;
-              notifications.info(`🗑️ Reserva #${reserva.id_reserva} eliminada`, {
-                duration: 4000
-              });
             }
 
-            // Llamar callback si existe
-            if (callbackRef.current) {
-              callbackRef.current();
-            }
+            if (callbackRef.current) callbackRef.current();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'reserva'
+          },
+          (payload) => {
+            if (!mounted) return;
+            const reserva = payload.old as Record<string, unknown>;
+            notifications.info(`🗑️ Reserva #${reserva.id_reserva} eliminada`, {
+              duration: 4000
+            });
+            if (callbackRef.current) callbackRef.current();
           }
         )
         .subscribe();

@@ -16,42 +16,56 @@ export function useClientesRealtime(onClienteChange?: () => void) {
 
     try {
       channel = supabase
-        .channel('clientes-notifications-realtime')
+        .channel('clientes-global-listener')
         .on(
           'postgres_changes',
           {
-            event: '*',
+            event: 'INSERT',
             schema: 'public',
             table: 'cliente'
           },
           (payload) => {
             if (!mounted) return;
-
-            // Notificaciones según el tipo de evento
-            if (payload.eventType === 'INSERT') {
-              const cliente = payload.new as Record<string, unknown>;
-              const nombreCompleto = `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
-              notifications.success(`👤 Nuevo cliente: ${nombreCompleto || 'Cliente sin nombre'}`, {
-                duration: 5000
-              });
-            } else if (payload.eventType === 'UPDATE') {
-              const cliente = payload.new as Record<string, unknown>;
-              const nombreCompleto = `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
-              notifications.info(`📝 Cliente actualizado: ${nombreCompleto || `#${cliente.id_cliente}`}`, {
-                duration: 4000
-              });
-            } else if (payload.eventType === 'DELETE') {
-              const cliente = payload.old as Record<string, unknown>;
-              const nombreCompleto = `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
-              notifications.info(`🗑️ Cliente eliminado: ${nombreCompleto || `#${cliente.id_cliente}`}`, {
-                duration: 4000
-              });
-            }
-
-            // Llamar callback si existe
-            if (callbackRef.current) {
-              callbackRef.current();
-            }
+            const cliente = payload.new as Record<string, unknown>;
+            const nombreCompleto = `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+            notifications.success(`👤 Nuevo cliente: ${nombreCompleto || 'Cliente sin nombre'}`, {
+              duration: 5000
+            });
+            if (callbackRef.current) callbackRef.current();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'cliente'
+          },
+          (payload) => {
+            if (!mounted) return;
+            const cliente = payload.new as Record<string, unknown>;
+            const nombreCompleto = `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+            notifications.info(`📝 Cliente actualizado: ${nombreCompleto || `#${cliente.id_cliente}`}`, {
+              duration: 4000
+            });
+            if (callbackRef.current) callbackRef.current();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'cliente'
+          },
+          (payload) => {
+            if (!mounted) return;
+            const cliente = payload.old as Record<string, unknown>;
+            const nombreCompleto = `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
+            notifications.info(`🗑️ Cliente eliminado: ${nombreCompleto || `#${cliente.id_cliente}`}`, {
+              duration: 4000
+            });
+            if (callbackRef.current) callbackRef.current();
           }
         )
         .subscribe();
