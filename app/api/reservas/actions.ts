@@ -720,16 +720,25 @@ export async function obtenerEstadisticasDashboard() {
     const ingresosDiarios = pagosHoy?.filter(pago => {
       if (!pago.fecha_pago) return false;
       
-      const fecha = new Date(pago.fecha_pago + (pago.fecha_pago.includes('Z') ? '' : 'Z'));
-      const opciones = {
-        timeZone: 'America/Argentina/Buenos_Aires',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      } as const;
-      
-      const fechaPagoBuenosAires = new Intl.DateTimeFormat('sv-SE', opciones).format(fecha);
-      return fechaPagoBuenosAires === fechaHoy;
+      try {
+        // timestamptz se maneja directamente
+        const fecha = new Date(pago.fecha_pago);
+        
+        // Validar fecha válida
+        if (isNaN(fecha.getTime())) return false;
+        
+        const opciones = {
+          timeZone: 'America/Argentina/Buenos_Aires',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        } as const;
+        
+        const fechaPagoBuenosAires = new Intl.DateTimeFormat('sv-SE', opciones).format(fecha);
+        return fechaPagoBuenosAires === fechaHoy;
+      } catch {
+        return false;
+      }
     }).reduce((total, pago) => {
       return total + (pago.monto || 0);
     }, 0) || 0;
@@ -756,16 +765,25 @@ export async function obtenerEstadisticasDashboard() {
     const ingresosMensuales = pagosMensuales?.filter(pago => {
       if (!pago.fecha_pago) return false;
       
-      const fecha = new Date(pago.fecha_pago + (pago.fecha_pago.includes('Z') ? '' : 'Z'));
-      const opciones = {
-        timeZone: 'America/Argentina/Buenos_Aires',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      } as const;
-      
-      const fechaPagoBuenosAires = new Intl.DateTimeFormat('sv-SE', opciones).format(fecha);
-      return fechaPagoBuenosAires >= inicioMesStr && fechaPagoBuenosAires <= finMesStr;
+      try {
+        // timestamptz se maneja directamente
+        const fecha = new Date(pago.fecha_pago);
+        
+        // Validar fecha válida
+        if (isNaN(fecha.getTime())) return false;
+        
+        const opciones = {
+          timeZone: 'America/Argentina/Buenos_Aires',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        } as const;
+        
+        const fechaPagoBuenosAires = new Intl.DateTimeFormat('sv-SE', opciones).format(fecha);
+        return fechaPagoBuenosAires >= inicioMesStr && fechaPagoBuenosAires <= finMesStr;
+      } catch {
+        return false;
+      }
     }).reduce((total, pago) => 
       total + (pago.monto || 0), 0) || 0;
     const { data: canchas, error: errorCanchas } = await supabase
