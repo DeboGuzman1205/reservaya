@@ -16,6 +16,9 @@ const defaultOptions: NotificationOptions = {
   position: 'top-right',
 };
 
+// Verificar si estamos en el navegador
+const isBrowser = typeof window !== 'undefined';
+
 // Clase para manejar las notificaciones del sistema
 class NotificationManager {
   private static instance: NotificationManager;
@@ -32,8 +35,17 @@ class NotificationManager {
     return NotificationManager.instance;
   }
 
+  // Verificar si las notificaciones están disponibles
+  private canShowToast(): boolean {
+    return isBrowser && typeof toast !== 'undefined';
+  }
+
   // Notificación de éxito
   success(message: string, options?: NotificationOptions) {
+    if (!this.canShowToast()) {
+      console.log('✅', message);
+      return '';
+    }
     return toast.success(message, {
       ...defaultOptions,
       ...options,
@@ -47,6 +59,10 @@ class NotificationManager {
 
   // Notificación de error
   error(message: string, options?: NotificationOptions) {
+    if (!this.canShowToast()) {
+      console.error('❌', message);
+      return '';
+    }
     return toast.error(message, {
       ...defaultOptions,
       duration: 5000, // Los errores duran más tiempo
@@ -61,6 +77,10 @@ class NotificationManager {
 
   // Notificación informativa
   info(message: string, options?: NotificationOptions) {
+    if (!this.canShowToast()) {
+      console.info('ℹ️', message);
+      return '';
+    }
     return toast(message, {
       ...defaultOptions,
       ...options,
@@ -75,6 +95,10 @@ class NotificationManager {
 
   // Notificación de advertencia
   warning(message: string, options?: NotificationOptions) {
+    if (!this.canShowToast()) {
+      console.warn('⚠️', message);
+      return '';
+    }
     return toast(message, {
       ...defaultOptions,
       ...options,
@@ -289,7 +313,7 @@ export const realtimeNotifications = {
   },
 
   // Pagos
-  nuevoPago: (monto: string, idPago: string) => {
+  nuevoPago: (monto: string) => {
     notifications.success(
       `💰 Nuevo pago recibido ${monto}`,
       {
@@ -304,7 +328,7 @@ export const realtimeNotifications = {
     );
   },
 
-  pagoAprobado: (monto: string, idPago: string) => {
+  pagoAprobado: (monto: string) => {
     notifications.success(
       `🎉 ¡Pago aprobado! ${monto}`,
       {
@@ -319,7 +343,7 @@ export const realtimeNotifications = {
     );
   },
 
-  pagoCancelado: (monto: string, idPago: string) => {
+  pagoCancelado: (monto: string) => {
     notifications.error(
       `❌ Pago cancelado ${monto}`,
       {

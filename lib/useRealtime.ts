@@ -5,19 +5,20 @@ import {
   RealtimePostgresChangesPayload,
   REALTIME_POSTGRES_CHANGES_LISTEN_EVENT
 } from '@supabase/supabase-js';
+import { realtimeNotifications } from './notifications';
 
 // Función para llamar notificaciones de manera segura
 function callNotification(method: string, ...args: unknown[]) {
-  import('./notifications').then((notificationsModule) => {
-    const realtimeNotifications = notificationsModule.realtimeNotifications;
+  try {
     const methodFunction = realtimeNotifications?.[method as keyof typeof realtimeNotifications];
     
     if (typeof methodFunction === 'function') {
       return (methodFunction as (...params: unknown[]) => void)(...args);
     }
-  }).catch(() => {
+  } catch (error) {
     // Silencioso en producción
-  });
+    console.error('Error en notificación:', error);
+  }
 }
 
 type TablaSupabase = 'reserva' | 'cancha' | 'cliente' | 'pago';
@@ -300,15 +301,15 @@ class RealtimeChannelManager {
 
     switch (evento) {
       case 'INSERT':
-        callNotification('nuevoPago', montoFormateado, idPago.toString());
+        callNotification('nuevoPago', montoFormateado);
         break;
       case 'UPDATE':
         const estadoAnterior = (oldData?.estado_pago as string) || '';
         if (estadoAnterior !== estadoPago) {
           if (estadoPago === 'aprobado') {
-            callNotification('pagoAprobado', montoFormateado, idPago.toString());
+            callNotification('pagoAprobado', montoFormateado);
           } else if (estadoPago === 'cancelado') {
-            callNotification('pagoCancelado', montoFormateado, idPago.toString());
+            callNotification('pagoCancelado', montoFormateado);
           } else {
             callNotification('pagoActualizado', estadoPago, montoFormateado);
           }

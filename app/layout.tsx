@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import SupabaseProvider from './providers';
-import { Toaster } from 'react-hot-toast';
-import { toasterConfig } from '@/lib/notifications';
+import ToasterProvider from '@/components/ToasterProvider';
 
 const inter = Inter({
     subsets: ['latin'],
@@ -26,7 +25,7 @@ export default function RootLayout({
                 <SupabaseProvider>
                     {children}
                 </SupabaseProvider>
-                <Toaster {...toasterConfig} />
+                <ToasterProvider />
             </body>
         </html>
     );

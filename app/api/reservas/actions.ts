@@ -671,8 +671,9 @@ export async function obtenerEstadisticasDashboard() {
   try {
     const supabase = createServerComponentClient({ cookies });
     
-    // Usar fecha local en lugar de UTC
-    const hoy = new Date();
+    // Obtener fecha actual en Buenos Aires (UTC-3)
+    const ahoraUTC = new Date();
+    const hoy = new Date(ahoraUTC.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
     const fechaHoy = obtenerFechaLocal(hoy);
     
     const inicioDelMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
@@ -1007,10 +1008,12 @@ export async function obtenerHorariosDisponibles() {
   try {
     const supabase = createServerComponentClient({ cookies });
     
-    // Obtener fecha y hora actual (asumiendo que el servidor está en horario argentino)
-    const ahora = new Date();
-    const hoy = obtenerFechaLocal(ahora);
-    const horaActual = ahora.getHours();
+    // Obtener fecha y hora actual en Buenos Aires (UTC-3)
+    // El servidor está en UTC, así que convertimos a Buenos Aires
+    const ahoraUTC = new Date();
+    const ahoraBuenosAires = new Date(ahoraUTC.toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+    const hoy = obtenerFechaLocal(ahoraBuenosAires);
+    const horaActual = ahoraBuenosAires.getHours();
     
 
     
