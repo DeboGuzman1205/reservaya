@@ -32,37 +32,62 @@ export default function PagosPage() {
     setPaginaActual(1);
   }, [fechaFiltro, filtroEstado]);
   
-  const convertirFechaABuenosAires = (fechaUTC: string) => {
-    if (!fechaUTC) return 'No disponible';
+  const convertirFechaABuenosAires = (fechaTimestamptz: string) => {
+    if (!fechaTimestamptz) return 'No disponible';
     
-    const fecha = new Date(fechaUTC + (fechaUTC.includes('Z') ? '' : 'Z'));
-    
-    const opciones: Intl.DateTimeFormatOptions = {
-      timeZone: 'America/Argentina/Buenos_Aires',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    };
-    
-    return new Intl.DateTimeFormat('es-AR', opciones).format(fecha);
+    try {
+      // timestamptz ya viene con timezone desde PostgreSQL
+      const fecha = new Date(fechaTimestamptz);
+      
+      // Validar que la fecha es válida
+      if (isNaN(fecha.getTime())) {
+        console.warn('Fecha inválida en convertirFechaABuenosAires:', fechaTimestamptz);
+        return 'Fecha inválida';
+      }
+      
+      const opciones: Intl.DateTimeFormatOptions = {
+        timeZone: 'America/Argentina/Buenos_Aires',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      };
+      
+      return new Intl.DateTimeFormat('es-AR', opciones).format(fecha);
+    } catch (error) {
+      console.error('Error al formatear fecha timestamptz:', fechaTimestamptz, error);
+      return 'Error de formato';
+    }
   };
   
-  const obtenerFechaBuenosAires = (fechaUTC: string) => {
-    if (!fechaUTC) return '';
+  const obtenerFechaBuenosAires = (fechaTimestamptz: string) => {
+    if (!fechaTimestamptz) return '';
     
-    const fecha = new Date(fechaUTC + (fechaUTC.includes('Z') ? '' : 'Z'));
-    
-    const opciones = {
-      timeZone: 'America/Argentina/Buenos_Aires',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    } as const;
-    
-    return new Intl.DateTimeFormat('sv-SE', opciones).format(fecha);
+    try {
+      // timestamptz ya viene con timezone desde PostgreSQL
+      const fecha = new Date(fechaTimestamptz);
+      
+      // Validar que la fecha es válida
+      if (isNaN(fecha.getTime())) {
+        console.warn('Fecha inválida:', fechaTimestamptz);
+        return '';
+      }
+      
+      // Convertir a timezone de Buenos Aires y formatear como YYYY-MM-DD
+      const opciones = {
+        timeZone: 'America/Argentina/Buenos_Aires',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      } as const;
+      
+      return new Intl.DateTimeFormat('sv-SE', opciones).format(fecha);
+    } catch (error) {
+      console.error('Error al formatear fecha timestamptz:', fechaTimestamptz, error);
+      return '';
+    }
   };
 
   const handleAgregarPago = () => {
@@ -106,10 +131,10 @@ export default function PagosPage() {
     return pasaEstado && pasaFecha;
   });
   
-  // Ordenar pagos por fecha (más recientes primero) - manejar fechas UTC correctamente
+  // Ordenar pagos por fecha (más recientes primero) - timestamptz se maneja directamente
   const pagosOrdenados = [...pagosFiltrados].sort((a, b) => {
-    const fechaA = new Date(a.fecha_pago + (a.fecha_pago.includes('Z') ? '' : 'Z'));
-    const fechaB = new Date(b.fecha_pago + (b.fecha_pago.includes('Z') ? '' : 'Z'));
+    const fechaA = new Date(a.fecha_pago);
+    const fechaB = new Date(b.fecha_pago);
     return fechaB.getTime() - fechaA.getTime();
   });
   

@@ -42,14 +42,25 @@ export default function PagosList({ pagos, onActualizarPago, onEditPago, convert
       return convertirFechaABuenosAires(fecha);
     }
     
-    // Fallback por defecto
-    return new Date(fecha).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      // Fallback por defecto - timestamptz se maneja directamente
+      const fechaObj = new Date(fecha);
+      
+      // Validar que la fecha es válida
+      if (isNaN(fechaObj.getTime())) {
+        return 'Fecha inválida';
+      }
+      
+      return fechaObj.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Error de formato';
+    }
   };
 
   const formatearMonto = (monto: number) => {
