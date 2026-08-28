@@ -63,10 +63,8 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
         notifications.error(errorData.error || 'Error al crear pago');
         throw new Error(errorData.error || 'Error al crear pago');
       }
-
-      setTimeout(() => {
-        loadPagos();
-      }, 500);
+      const pagoCreado = await response.json();
+      setPagos(prev => [pagoCreado, ...prev]);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al crear pago';
       setError(errorMessage);
@@ -92,10 +90,8 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
         notifications.error(errorData.error || 'Error al actualizar pago');
         throw new Error(errorData.error || 'Error al actualizar pago');
       }
-
-      setTimeout(() => {
-        loadPagos();
-      }, 500);
+      const pagoActualizado = await response.json();
+      setPagos(prev => prev.map(pago => pago.id_pago === pagoActualizado.id_pago ? pagoActualizado : pago));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al actualizar pago';
       setError(errorMessage);
@@ -146,7 +142,15 @@ export function usePagosRealtime(): UsePagosRealtimeResult {
             }
           }
 
-          await loadPagos();
+          if (payload.eventType === 'INSERT') {
+            setPagos(prev => [payload.new as Pago, ...prev.filter(pago => pago.id_pago !== (payload.new as Pago).id_pago)]);
+          } else if (payload.eventType === 'UPDATE') {
+            const pagoActualizado = payload.new as Pago;
+            setPagos(prev => prev.map(pago => pago.id_pago === pagoActualizado.id_pago ? pagoActualizado : pago));
+          } else if (payload.eventType === 'DELETE') {
+            const pagoEliminado = payload.old as Pago;
+            setPagos(prev => prev.filter(pago => pago.id_pago !== pagoEliminado.id_pago));
+          }
         }
       )
       .subscribe();

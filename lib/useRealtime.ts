@@ -427,10 +427,7 @@ const useRealtimeSubscription = (options: UseRealtimeOptions) => {
       reconnectAttempts: initialStatus.reconnectAttempts
     });
     
-    const statusInterval = setInterval(updateConnectionState, 2000);
-    
     return () => {
-      clearInterval(statusInterval);
       channelManager.unsubscribe(tabla, subscriberId, callbacks);
     };
   }, [tabla, updateConnectionState]);
@@ -553,20 +550,6 @@ export const useDashboardRealtime = (options: UseDashboardRealtimeOptions) => {
 };
 
 // Aliases para compatibilidad
-export const useReservasRealtime = (onDataChange?: () => void) => {
-  return useRealtimeReservas(onDataChange ? () => setTimeout(() => onDataChange(), 50) : undefined);
-};
-
-export const useCanchasRealtime = (onDataChange?: () => void) => {
-  return useRealtimeCanchas(onDataChange ? () => setTimeout(() => onDataChange(), 50) : undefined);
-};
-
-export const useClientesRealtime = (onDataChange?: () => void) => {
-  return useRealtimeClientes(onDataChange ? () => setTimeout(() => onDataChange(), 50) : undefined);
-};
-
-
-
 export const disconnectAllRealtime = () => {
   channelManager.disconnectAll();
 };
@@ -575,20 +558,5 @@ export const reconnectAllRealtime = () => {
   channelManager.reconnectAll();
 };
 
-export const useRealtimeStatus = () => {
-  const [status, setStatus] = useState(channelManager.getConnectionStatus());
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStatus(channelManager.getConnectionStatus());
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
-  
-  return status;
-};
-
-// Exports principales
 export { useRealtimeSubscription };
 export default useRealtimeSubscription;

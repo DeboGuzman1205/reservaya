@@ -99,13 +99,11 @@ export default function PagosPage() {
   const handleGuardarPago = async (pagoData: Omit<Pago, 'id_pago' | 'fecha_pago'>) => {
     try {
       if (editingPago) {
-        // Actualizar pago existente
         await actualizarPago(editingPago.id_pago, {
           estado_pago: pagoData.estado_pago,
           mp_id: pagoData.mp_id || undefined
         });
       } else {
-        // Crear nuevo pago
         await crearPago(pagoData);
       }
       setShowModal(false);
@@ -115,35 +113,27 @@ export default function PagosPage() {
     }
   };
 
-  // Filtrar pagos por estado y fecha
   const pagosFiltrados = pagos.filter(pago => {
-    // Filtro por estado
     const pasaEstado = filtroEstado === 'todos' || pago.estado_pago === filtroEstado;
-    
-    // Filtro por fecha - usar la nueva función de conversión
     const fechaPagoBuenosAires = obtenerFechaBuenosAires(pago.fecha_pago);
     const pasaFecha = fechaPagoBuenosAires === fechaFiltro;
     
     return pasaEstado && pasaFecha;
   });
   
-  // Ordenar pagos por fecha (más recientes primero) - timestamptz se maneja directamente
   const pagosOrdenados = [...pagosFiltrados].sort((a, b) => {
     const fechaA = new Date(a.fecha_pago);
     const fechaB = new Date(b.fecha_pago);
     return fechaB.getTime() - fechaA.getTime();
   });
   
-  // Calcular paginación
   const totalPaginas = Math.ceil(pagosOrdenados.length / pagosPorPagina);
   const indiceInicio = (paginaActual - 1) * pagosPorPagina;
   const indiceFin = indiceInicio + pagosPorPagina;
   const pagosPaginados = pagosOrdenados.slice(indiceInicio, indiceFin);
 
   const getEstadisticas = () => {
-    // Usar la misma lógica de filtrado que los pagos mostrados en la lista
     const pagosParaStats = pagos.filter(pago => {
-      // Filtro por fecha - usar la nueva función de conversión
       const fechaPagoBuenosAires = obtenerFechaBuenosAires(pago.fecha_pago);
       return fechaPagoBuenosAires === fechaFiltro;
     });

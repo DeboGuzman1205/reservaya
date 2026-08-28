@@ -4,23 +4,14 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
-
-
   const supabase = createMiddlewareClient({ req, res })
 
   try {
-
-    await supabase.auth.getSession()
-
-
     const { data: { session } } = await supabase.auth.getSession()
 
     const pathname = req.nextUrl.pathname
 
-
-    const isPublicRoute = pathname === '/login' || 
-                          pathname.startsWith('/api/auth') ||
-                          pathname.includes('favicon.ico')
+    const isPublicRoute = pathname === '/login' || pathname.startsWith('/api/auth') || pathname.includes('favicon.ico')
 
 
     if (!session && !isPublicRoute) {
@@ -32,14 +23,10 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', req.url))
     }
   } catch {
-
   }
-
-
   return res
 }
 
-// Configurar las rutas a las que aplica el middleware
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.svg|api/external).*)',

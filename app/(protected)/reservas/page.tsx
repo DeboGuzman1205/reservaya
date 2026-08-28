@@ -5,7 +5,6 @@ import { Reserva, Cliente, Cancha } from '@/types';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import ReservaForm from '@/components/reservas/ReservaForm';
 import ReservasList from '@/components/reservas/ReservasList';
-import { useRouter } from 'next/navigation';
 import notifications from '@/lib/notifications';
 
 // Importar las acciones del servidor
@@ -18,11 +17,9 @@ import {
 
   obtenerClientesActivos,
   obtenerCanchasDisponibles,
-  verificarBaseDatos
 } from '@/app/api/reservas/actions';
 
 export default function ReservasPage() {
-  const router = useRouter();
   const [reservas, setReservas] = useState<Reserva[]>([]);
   const [reservaEditando, setReservaEditando] = useState<Reserva | undefined>(undefined);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -35,44 +32,6 @@ export default function ReservasPage() {
       setErrorMessage('');
       
       try {
-        // Primero verificar la base de datos
-
-        const dbStatus = await verificarBaseDatos();
-        
-        if (!dbStatus.success) {
-          setErrorMessage(`Error de conexión a la base de datos: ${dbStatus.error}. Por favor, verifica que las tablas estén creadas correctamente.`);
-          return;
-        }
-        
-
-        
-        // Mostrar diagnóstico detallado
-        if (dbStatus.data) {
-          const diagnosticos = [];
-          
-          if (!dbStatus.data.cliente.existe) {
-            diagnosticos.push(`❌ Tabla 'cliente' no disponible: ${dbStatus.data.cliente.error}`);
-          } else {
-            diagnosticos.push(`✅ Tabla 'cliente' encontrada con columnas: ${dbStatus.data.cliente.estructura?.join(', ')}`);
-          }
-          
-          if (!dbStatus.data.reserva.existe) {
-            diagnosticos.push(`❌ Tabla 'reserva' no disponible: ${dbStatus.data.reserva.error}`);
-          } else {
-            diagnosticos.push(`✅ Tabla 'reserva' encontrada con columnas: ${dbStatus.data.reserva.estructura?.join(', ')}`);
-          }
-          
-          if (!dbStatus.data.cancha.existe) {
-            diagnosticos.push(`❌ Tabla 'cancha' no disponible: ${dbStatus.data.cancha.error}`);
-          } else {
-            diagnosticos.push(`✅ Tabla 'cancha' encontrada con columnas: ${dbStatus.data.cancha.estructura?.join(', ')}`);
-          }
-          
-
-        }
-        
-
-        
         // Cargar los clientes activos, reservas y canchas
         const [clientesData, reservasData, canchasData] = await Promise.all([
           obtenerClientesActivos().catch(error => {
@@ -99,16 +58,8 @@ export default function ReservasPage() {
       }
   }, []);
 
-  // Cargar datos al inicio y periódicamente
   useEffect(() => {
     cargarDatos();
-    
-    // Recargar datos cada 30 segundos como fallback
-    const interval = setInterval(() => {
-      cargarDatos();
-    }, 30000);
-    
-    return () => clearInterval(interval);
   }, [cargarDatos]);
 
   const handleSubmitReserva = async (reserva: Omit<Reserva, 'id_reserva'>) => {
@@ -120,14 +71,11 @@ export default function ReservasPage() {
       } else {
         await crearReserva(reserva);
       }
-      
-      // Recargar las reservas
       const nuevasReservas = await obtenerReservas();
       setReservas(nuevasReservas);
       
       setMostrarFormulario(false);
       setReservaEditando(undefined);
-      router.refresh();
     } catch (error) {
             setErrorMessage((error as Error).message || 'Error al procesar la reserva');
             notifications.error(reservaEditando ? 'Error al actualizar la reserva' : 'Error al crear la reserva');
@@ -185,7 +133,6 @@ export default function ReservasPage() {
               await eliminarReserva(id);
               const nuevasReservas = await obtenerReservas();
               setReservas(nuevasReservas);
-              router.refresh();
             } catch {
                             setErrorMessage('Error al eliminar la reserva');
                             notifications.error('Error al eliminar la reserva');
@@ -197,7 +144,6 @@ export default function ReservasPage() {
               await cambiarEstadoReserva(id, estado);
               const nuevasReservas = await obtenerReservas();
               setReservas(nuevasReservas);
-              router.refresh();
             } catch {
                             setErrorMessage('Error al cambiar el estado de la reserva');
                             notifications.error('Error al cambiar el estado');

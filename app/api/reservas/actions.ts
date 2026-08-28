@@ -13,6 +13,46 @@ function obtenerFechaLocal(fecha: Date): string {
          String(fecha.getDate()).padStart(2, '0');
 }
 
+async function cargarRelacionesReservas(
+  supabase: ReturnType<typeof createServerComponentClient>,
+  reservas: Array<{ id_cliente: number; id_cancha: number }>
+) {
+  const clientes = new Map<number, { nombre: string; apellido: string | null }>();
+  const canchas = new Map<number, { nombre: string }>();
+
+  const idsCliente = Array.from(new Set(reservas.map(reserva => reserva.id_cliente).filter(id => Number.isFinite(Number(id)))));
+  const idsCancha = Array.from(new Set(reservas.map(reserva => reserva.id_cancha).filter(id => Number.isFinite(Number(id)))));
+
+  if (idsCliente.length > 0) {
+    const { data } = await supabase
+      .from('cliente')
+      .select('id_cliente, nombre, apellido')
+      .in('id_cliente', idsCliente);
+
+    data?.forEach(cliente => {
+      clientes.set(cliente.id_cliente, {
+        nombre: cliente.nombre,
+        apellido: cliente.apellido
+      });
+    });
+  }
+
+  if (idsCancha.length > 0) {
+    const { data } = await supabase
+      .from('cancha')
+      .select('id_cancha, nombre')
+      .in('id_cancha', idsCancha);
+
+    data?.forEach(cancha => {
+      canchas.set(cancha.id_cancha, {
+        nombre: cancha.nombre
+      });
+    });
+  }
+
+  return { clientes, canchas };
+}
+
 const verificarConectividad = async (supabase: ReturnType<typeof createServerComponentClient>) => {
   try {
     const { data: session, error: sessionError } = await supabase.auth.getSession();
@@ -215,11 +255,7 @@ export const calcularCostoReserva = async (
 export async function obtenerReservas() {
   try {
     const supabase = createServerComponentClient({ cookies });
-    
-    // Verificar conectividad y sesión
     await verificarConectividad(supabase);
-    
-    // Primero obtener las reservas sin especificar orden para evitar errores de columnas
     const { data: reservas, error } = await supabase
       .from('reserva')
       .select('*');
@@ -231,36 +267,15 @@ export async function obtenerReservas() {
       
       throw new Error('Error al cargar las reservas: ' + error.message);
     }
-    
-    // Ahora intentar obtener datos relacionados manualmente
-    const reservasConDatos = await Promise.all((reservas || []).map(async (reserva) => {
-      try {
-        // Intentar obtener datos del cliente
-        const { data: cliente } = await supabase
-          .from('cliente')
-          .select('*')
-          .eq('id_cliente', reserva.id_cliente)
-          .single();
-          
-        // Intentar obtener datos de la cancha
-        const { data: cancha } = await supabase
-          .from('cancha')
-          .select('*')
-          .eq('id_cancha', reserva.id_cancha)
-          .single();
-          
-        return {
-          ...reserva,
-          cliente: cliente || null,
-          cancha: cancha || null
-        };
-      } catch {
-        return reserva;
-      }
-    }));
-    
 
-    return reservasConDatos;
+    const filas = reservas || [];
+    const { clientes, canchas } = await cargarRelacionesReservas(supabase, filas);
+
+    return filas.map(reserva => ({
+      ...reserva,
+      cliente: clientes.get(reserva.id_cliente) || null,
+      cancha: canchas.get(reserva.id_cancha) || null
+    }));
     
   } catch (error) {
         throw new Error('Error al cargar las reservas: ' + (error as Error).message);
@@ -422,8 +437,6 @@ export async function cambiarEstadoReserva(id: number, estado: string) {
 export async function buscarReservas(query: string) {
   try {
     const supabase = createServerComponentClient({ cookies });
-    
-    // Primero obtener todas las reservas para evitar errores de columnas
     const { data: reservas, error } = await supabase
       .from('reserva')
       .select('*');
@@ -431,8 +444,7 @@ export async function buscarReservas(query: string) {
     if (error) {
             throw new Error('Error al buscar reservas: ' + error.message);
     }
-    
-    // Filtrar manualmente por el query usando nombres reales de columnas
+
     const reservasFiltradas = (reservas || []).filter(reserva => {
       const queryLower = query.toLowerCase();
       return (
@@ -442,33 +454,14 @@ export async function buscarReservas(query: string) {
         (reserva.observaciones && reserva.observaciones.toLowerCase().includes(queryLower))
       );
     });
-    
-    // Obtener datos relacionados manualmente
-    const reservasConDatos = await Promise.all(reservasFiltradas.map(async (reserva) => {
-      try {
-        const { data: cliente } = await supabase
-          .from('cliente')
-          .select('*')
-          .eq('id_cliente', reserva.id_cliente)
-          .single();
-          
-        const { data: cancha } = await supabase
-          .from('cancha')
-          .select('*')
-          .eq('id_cancha', reserva.id_cancha)
-          .single();
-          
-        return {
-          ...reserva,
-          cliente: cliente || null,
-          cancha: cancha || null
-        };
-      } catch {
-        return reserva;
-      }
+
+    const { clientes, canchas } = await cargarRelacionesReservas(supabase, reservasFiltradas);
+
+    return reservasFiltradas.map(reserva => ({
+      ...reserva,
+      cliente: clientes.get(reserva.id_cliente) || null,
+      cancha: canchas.get(reserva.id_cancha) || null
     }));
-    
-    return reservasConDatos;
   } catch (error) {
         throw new Error('Error al buscar reservas: ' + (error as Error).message);
   }
@@ -550,20 +543,7 @@ export async function verificarBaseDatos() {
 export async function obtenerClientesActivos() {
   try {
     const supabase = createServerComponentClient({ cookies });
-    
-    // Verificar conectividad y sesión
     await verificarConectividad(supabase);
-    
-    // Primero verificar que la tabla existe
-    const { error: tableError } = await supabase
-      .from('cliente')
-      .select('id_cliente')
-      .limit(1);
-      
-    if (tableError) {
-            throw new Error('Error al acceder a la tabla cliente: ' + tableError.message);
-    }
-    
 
     const { data: clientes, error: clientesError } = await supabase
       .from('cliente')
@@ -595,21 +575,8 @@ export async function obtenerClientesActivos() {
 export async function obtenerCanchasDisponibles() {
   try {
     const supabase = createServerComponentClient({ cookies });
-    
-    // Verificar conectividad y sesión
     await verificarConectividad(supabase);
-    
-    // Primero verificar que la tabla existe
-    const { error: tableError } = await supabase
-      .from('cancha')
-      .select('id_cancha')
-      .limit(1);
-      
-    if (tableError) {
-            throw new Error('Error al acceder a la tabla cancha: ' + tableError.message);
-    }
-    
-    // Ahora obtener todas las canchas
+
     const { data: canchas, error } = await supabase
       .from('cancha')
       .select('*');
@@ -622,12 +589,9 @@ export async function obtenerCanchasDisponibles() {
       
       throw new Error('Error al cargar las canchas: ' + error.message);
     }
-    
-    // Filtrar canchas disponibles usando el campo 'estado' real de tu BD
+
     const canchasDisponibles = canchas?.filter(cancha => {
       const estado = cancha.estado?.toLowerCase();
-      
-      // Excluir explícitamente canchas con estados no disponibles
       const estadosNoDisponibles = [
         'no disponible', 
         'en mantenimiento', 
@@ -638,22 +602,13 @@ export async function obtenerCanchasDisponibles() {
         'cerrada',
         'cerrado'
       ];
-      
-      // Si tiene un estado no disponible, excluir
       if (estado && estadosNoDisponibles.includes(estado)) {
         return false;
       }
-      
-      // Si no tiene estado definido, incluir (por defecto disponible)
       if (!estado) return true;
-      
-      // Solo incluir canchas explícitamente disponibles
       return estado === 'disponible' || estado === 'activa' || estado === 'activo';
     }) || [];
-    
 
-    
-    // Ordenar por nombre usando el campo real 'nombre' de tu BD
     const canchasOrdenadas = canchasDisponibles.sort((a, b) => {
       const nombreA = a.nombre || `Cancha ${a.id_cancha}`;
       const nombreB = b.nombre || `Cancha ${b.id_cancha}`;

@@ -24,6 +24,7 @@ function validateApiKey(request: NextRequest): boolean {
   return apiKey === process.env.N8N_API_KEY;
 }
 
+
 // GET: Verificar si existe un cliente por chat_id
 export async function GET(request: NextRequest) {
   try {

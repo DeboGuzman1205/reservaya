@@ -19,6 +19,7 @@ import WeeklyBookingsChart from '@/components/charts/WeeklyBookingsChart';
 import type { DashboardStats, ReservaPorHorario, ReservaPorDia, HorarioDisponible } from '@/types/dashboard';
 
 export default function DashboardPage() {
+  const supabase = createClientComponentClient();
   const [statsData, setStatsData] = useState<DashboardStats>({
     reservasConfirmadas: 0,
     reservasPendientes: 0,
@@ -49,7 +50,6 @@ export default function DashboardPage() {
   // Consulta reservas de una cancha en fecha específica
   const getReservasPorFecha = async (canchaId: number, fecha: string) => {
     try {
-      const supabase = createClientComponentClient();
       const { data, error } = await supabase
         .from('reserva')
         .select('hora_inicio, hora_fin, estado_reserva')
@@ -145,50 +145,37 @@ export default function DashboardPage() {
     
     try {
       const fechas7Dias = calcular7Dias();
-      const reservasPorDia = [];
-      
-      for (const fecha of fechas7Dias) {
-        const reservasDelDia = await getReservasPorFecha(cancha.id_cancha, fecha);
-        
-        // Generar horarios base (08:00 a 23:00)
-        const horariosBase = [];
-        for (let h = 8; h <= 23; h++) {
-          horariosBase.push(`${h.toString().padStart(2, '0')}:00`);
-        }
-        
-        // Calcular horarios ocupados incluyendo rangos completos
-        const horariosOcupados: string[] = [];
-        
-        reservasDelDia.forEach(reserva => {
-          const horaInicio = reserva.hora_inicio.substring(0, 5);
-          const horaFin = reserva.hora_fin.substring(0, 5);
-          const horaInicioNum = parseInt(horaInicio.split(':')[0]);
-          let horaFinNum = parseInt(horaFin.split(':')[0]);
-          
-          // Manejar el caso especial de reservas que terminan a medianoche (00:00)
-          if (horaFin === '00:00') {
-            horaFinNum = 24; // Tratar 00:00 como 24:00 para el cálculo
-          }
-          
-          // Marcar todas las horas del rango de la reserva
-          for (let h = horaInicioNum; h < horaFinNum; h++) {
-            const horarioOcupado = `${h.toString().padStart(2, '0')}:00`;
-            if (!horariosOcupados.includes(horarioOcupado)) {
-              horariosOcupados.push(horarioOcupado);
+      const horariosBase = Array.from({ length: 16 }, (_, index) => `${String(index + 8).padStart(2, '0')}:00`);
+      const reservasPorDia = await Promise.all(
+        fechas7Dias.map(async (fecha) => {
+          const reservasDelDia = await getReservasPorFecha(cancha.id_cancha, fecha);
+          const horariosOcupados: string[] = [];
+
+          reservasDelDia.forEach(reserva => {
+            const horaInicio = reserva.hora_inicio.substring(0, 5);
+            const horaFin = reserva.hora_fin.substring(0, 5);
+            const horaInicioNum = parseInt(horaInicio.split(':')[0]);
+            let horaFinNum = parseInt(horaFin.split(':')[0]);
+
+            if (horaFin === '00:00') {
+              horaFinNum = 24;
             }
-          }
-        });
-        
-        const horariosDisponibles = horariosBase.filter(
-          horario => !horariosOcupados.includes(horario)
-        );
-        
-        reservasPorDia.push({
-          fecha,
-          horariosDisponibles,
-          horariosOcupados
-        });
-      }
+
+            for (let h = horaInicioNum; h < horaFinNum; h++) {
+              const horarioOcupado = `${String(h).padStart(2, '0')}:00`;
+              if (!horariosOcupados.includes(horarioOcupado)) {
+                horariosOcupados.push(horarioOcupado);
+              }
+            }
+          });
+
+          return {
+            fecha,
+            horariosDisponibles: horariosBase.filter(horario => !horariosOcupados.includes(horario)),
+            horariosOcupados
+          };
+        })
+      );
       
       setReservasSemana(reservasPorDia);
       setModalAbierto(true);

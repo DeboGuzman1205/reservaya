@@ -5,7 +5,6 @@ import { Cliente } from '@/types';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import ClienteForm from '@/components/clientes/ClienteForm';
 import ClientesList from '@/components/clientes/ClientesList';
-import { useRouter } from 'next/navigation';
 import notifications from '@/lib/notifications';
 
 // Importar las acciones del servidor
@@ -18,7 +17,6 @@ import {
 } from '@/app/api/clientes/actions';
 
 export default function ClientesPage() {
-    const router = useRouter();
     const [clientes, setClientes] = useState<Cliente[]>([]);
     const [clienteEditando, setClienteEditando] = useState<Cliente | undefined>(undefined);
     const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -35,15 +33,8 @@ export default function ClientesPage() {
         }
     }, []);
 
-    // Cargar datos al inicio y periódicamente
     useEffect(() => {
         cargarClientes();
-        
-        const interval = setInterval(() => {
-            cargarClientes();
-        }, 30000);
-        
-        return () => clearInterval(interval);
     }, [cargarClientes]);
 
     // Manejar creación de cliente
@@ -52,14 +43,15 @@ export default function ClientesPage() {
         setErrorMessage('');
 
         try {
-            await crearCliente(cliente);
+            const nuevoCliente = await crearCliente(cliente);
+            if (nuevoCliente) {
+                setClientes(prev => [...prev, nuevoCliente]);
+            }
             setMostrarFormulario(false);
-            cargarClientes();
-            router.refresh();
         } catch {
             setErrorMessage('Error al crear el cliente. Intenta nuevamente.');
             notifications.error('Error al crear el cliente');
-                    } finally {
+        } finally {
             setIsLoading(false);
         }
     };
@@ -72,15 +64,16 @@ export default function ClientesPage() {
         setErrorMessage('');
 
         try {
-            await actualizarCliente(clienteEditando.id_cliente, cliente);
+            const clienteActualizado = await actualizarCliente(clienteEditando.id_cliente, cliente);
+            if (clienteActualizado) {
+                setClientes(prev => prev.map(item => item.id_cliente === clienteEditando.id_cliente ? clienteActualizado : item));
+            }
             setClienteEditando(undefined);
             setMostrarFormulario(false);
-            cargarClientes();
-            router.refresh();
         } catch {
             setErrorMessage('Error al actualizar el cliente. Intenta nuevamente.');
             notifications.error('Error al actualizar el cliente');
-                    } finally {
+        } finally {
             setIsLoading(false);
         }
     };
@@ -92,12 +85,11 @@ export default function ClientesPage() {
 
         try {
             await eliminarCliente(id);
-            cargarClientes();
-            router.refresh();
+            setClientes(prev => prev.filter(cliente => cliente.id_cliente !== id));
         } catch {
             setErrorMessage('Error al eliminar el cliente. Intenta nuevamente.');
             notifications.error('Error al eliminar el cliente');
-                    } finally {
+        } finally {
             setIsLoading(false);
         }
     };
@@ -116,26 +108,21 @@ export default function ClientesPage() {
             }
         } catch {
             setErrorMessage('Error al buscar clientes. Intenta nuevamente.');
-                    } finally {
+        } finally {
             setIsLoading(false);
         }
     };
-    
 
-
-    // Función para abrir formulario de edición
     const handleEditarCliente = (cliente: Cliente) => {
         setClienteEditando(cliente);
         setMostrarFormulario(true);
     };
 
-    // Función para cerrar formulario
     const handleCerrarFormulario = () => {
         setClienteEditando(undefined);
         setMostrarFormulario(false);
     };
 
-    // Función para manejar envío del formulario (decide entre crear o actualizar)
     const handleSubmitFormulario = async (data: Omit<Cliente, 'id_cliente' | 'fecha_registro'>) => {
         if (clienteEditando) {
             await handleActualizarCliente(data);

@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase environment variables');
-  }
-
-  return createClient(supabaseUrl, supabaseKey);
+  const cookieStore = cookies();
+  return createRouteHandlerClient({ cookies: () => cookieStore });
 }
 
 // GET - Obtener todos los pagos
@@ -30,12 +25,18 @@ export async function GET() {
       .order('fecha_pago', { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: 'Error al obtener los pagos' }, { status: 500 });
+      return NextResponse.json(
+        { error: error.message || 'Error al obtener los pagos' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(pagos);
-  } catch {
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Error interno del servidor' },
+      { status: 500 }
+    );
   }
 }
 
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     if (reservaError || !reserva) {
       return NextResponse.json(
-        { error: 'La reserva especificada no existe' },
+        { error: reservaError?.message || 'La reserva especificada no existe' },
         { status: 404 }
       );
     }
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (pagoError) {
-      return NextResponse.json({ error: 'Error al crear el pago' }, { status: 500 });
+      return NextResponse.json({ error: pagoError.message || 'Error al crear el pago' }, { status: 500 });
     }
 
 
@@ -100,13 +101,16 @@ export async function POST(request: NextRequest) {
         .eq('id_reserva', id_reserva);
 
       if (updateError) {
-        // Pago creado exitosamente, error en actualización de reserva es secundario
+        return NextResponse.json({ error: updateError.message || 'Pago creado, pero no se pudo actualizar la reserva' }, { status: 500 });
       }
     }
 
     return NextResponse.json(pago);
-  } catch {
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Error interno del servidor' },
+      { status: 500 }
+    );
   }
 }
 
@@ -145,11 +149,14 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: 'Error al actualizar el pago' }, { status: 500 });
+      return NextResponse.json({ error: error.message || 'Error al actualizar el pago' }, { status: 500 });
     }
 
     return NextResponse.json(pago);
-  } catch {
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Error interno del servidor' },
+      { status: 500 }
+    );
   }
 }

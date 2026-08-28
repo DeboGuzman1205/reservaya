@@ -16,6 +16,8 @@ function getSupabaseClient() {
 }
 
 // ✅ Validar API key de n8n
+
+
 function validateApiKey(request: NextRequest) {
   return request.headers.get("x-api-key") === process.env.N8N_API_KEY;
 }

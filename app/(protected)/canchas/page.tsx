@@ -5,7 +5,6 @@ import { Cancha } from '@/types';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import CanchaForm from '@/components/canchas/CanchaForm';
 import CanchasList from '@/components/canchas/CanchasList';
-import { useRouter } from 'next/navigation';
 import notifications from '@/lib/notifications';
 
 // Importar las acciones del servidor
@@ -18,7 +17,6 @@ import {
 } from '@/app/api/canchas/actions';
 
 export default function CanchasPage() {
-    const router = useRouter();
     const [canchas, setCanchas] = useState<Cancha[]>([]);
     const [canchaEditando, setCanchaEditando] = useState<Cancha | undefined>(undefined);
     const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -35,15 +33,8 @@ export default function CanchasPage() {
         }
     }, []);
 
-    // Cargar datos al inicio y periódicamente
     useEffect(() => {
         cargarCanchas();
-        
-        const interval = setInterval(() => {
-            cargarCanchas();
-        }, 30000);
-        
-        return () => clearInterval(interval);
     }, [cargarCanchas]);
 
     // Manejar creación de cancha
@@ -52,14 +43,15 @@ export default function CanchasPage() {
         setErrorMessage('');
 
         try {
-            await crearCancha(cancha);
+            const nuevaCancha = await crearCancha(cancha);
+            if (nuevaCancha) {
+                setCanchas(prev => [...prev, nuevaCancha]);
+            }
             setMostrarFormulario(false);
-            cargarCanchas();
-            router.refresh();
         } catch {
             setErrorMessage('Error al crear la cancha. Intenta nuevamente.');
             notifications.error('Error al crear la cancha');
-                    } finally {
+        } finally {
             setIsLoading(false);
         }
     };
@@ -72,15 +64,16 @@ export default function CanchasPage() {
         setErrorMessage('');
 
         try {
-            await actualizarCancha(canchaEditando.id_cancha, cancha);
+            const canchaActualizada = await actualizarCancha(canchaEditando.id_cancha, cancha);
+            if (canchaActualizada) {
+                setCanchas(prev => prev.map(item => item.id_cancha === canchaEditando.id_cancha ? canchaActualizada : item));
+            }
             setCanchaEditando(undefined);
             setMostrarFormulario(false);
-            cargarCanchas();
-            router.refresh();
         } catch {
             setErrorMessage('Error al actualizar la cancha. Intenta nuevamente.');
             notifications.error('Error al actualizar la cancha');
-                    } finally {
+        } finally {
             setIsLoading(false);
         }
     };
@@ -92,12 +85,11 @@ export default function CanchasPage() {
 
         try {
             await eliminarCancha(id);
-            cargarCanchas();
-            router.refresh();
+            setCanchas(prev => prev.filter(cancha => cancha.id_cancha !== id));
         } catch {
             setErrorMessage('Error al eliminar la cancha. Intenta nuevamente.');
             notifications.error('Error al eliminar la cancha');
-                    } finally {
+        } finally {
             setIsLoading(false);
         }
     };
@@ -108,30 +100,28 @@ export default function CanchasPage() {
         setErrorMessage('');
 
         try {
-            await cambiarEstadoCancha(id, estado_cancha);
-            cargarCanchas();
-            router.refresh();
+            const canchaActualizada = await cambiarEstadoCancha(id, estado_cancha);
+            if (canchaActualizada) {
+                setCanchas(prev => prev.map(item => item.id_cancha === id ? canchaActualizada : item));
+            }
         } catch {
             setErrorMessage('Error al cambiar el estado de la cancha. Intenta nuevamente.');
             notifications.error('Error al cambiar el estado');
-                    } finally {
+        } finally {
             setIsLoading(false);
         }
     };
 
-    // Función para abrir formulario de edición
     const handleEditarCancha = (cancha: Cancha) => {
         setCanchaEditando(cancha);
         setMostrarFormulario(true);
     };
 
-    // Función para cerrar formulario
     const handleCerrarFormulario = () => {
         setCanchaEditando(undefined);
         setMostrarFormulario(false);
     };
 
-    // Función para manejar envío del formulario (decide entre crear o actualizar)
     const handleSubmitFormulario = async (data: Omit<Cancha, 'id_cancha' | 'created_at'>) => {
         if (canchaEditando) {
             await handleActualizarCancha(data);
